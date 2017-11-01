@@ -1,0 +1,22 @@
+﻿<Window x:Class="PolygonFilling.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:PolygonFilling"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="350" Width="525"
+        WindowState="Maximized">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="4*"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Canvas Grid.Column="0" Name="canvas" Background="White"/>
+        <StackPanel Grid.Column="1" Background="Coral">
+            <Button Name="ClearCanvasButton" Click="ClearCanvas" Content="Wyczysc" Margin="10,20" />
+            <ToggleButton Name="DrawPolygonToggleButton" Checked="StartDrawingPolygon" Unchecked="EndDrawingPolygon" Content="Narysuj wielokat" Margin="10,20" />
+        </StackPanel>
+    </Grid>
+</Window>
