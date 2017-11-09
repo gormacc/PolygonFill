@@ -1,4 +1,5 @@
-﻿using System.Windows.Shapes;
+﻿using System;
+using System.Windows.Shapes;
 
 namespace PolygonFilling.Structures
 {
@@ -21,5 +22,13 @@ namespace PolygonFilling.Structures
             VertexTwo = vertexTwo;
             Lin = line;
         }
+
+        public int LowerY => (int)Math.Min(VertexOne.Coordinates.Y, VertexTwo.Coordinates.Y);
+
+        public int GreaterY => (int)Math.Max(VertexOne.Coordinates.Y, VertexTwo.Coordinates.Y);
+
+        public int LowerX => (int)Math.Min(VertexOne.Coordinates.X, VertexTwo.Coordinates.X);
+
+        public int GreaterX => (int)Math.Max(VertexOne.Coordinates.X, VertexTwo.Coordinates.X);
     }
 }

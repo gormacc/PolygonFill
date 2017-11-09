@@ -13,6 +13,9 @@ namespace PolygonFilling
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
+    /// 
+    /// zrób nachylenie !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    /// 
     /// </summary>
     public partial class MainWindow : Window
     {
@@ -20,6 +23,7 @@ namespace PolygonFilling
         private Polygon _currentPolygon = new Polygon();
         private readonly Brush _defaultPolygonColor = Brushes.Black;
         private readonly ContextMenu _verticleContextMenu = new ContextMenu();
+        private readonly Brush _defualtFillColor = Brushes.Red;
 
         public MainWindow()
         {
@@ -47,7 +51,7 @@ namespace PolygonFilling
         {
             Point coordinates = GetMousePosition(sender);
 
-            Rectangle pixel = SetPixel((int)coordinates.X, (int)coordinates.Y);
+            Rectangle pixel = SetPixel((int)coordinates.X, (int)coordinates.Y, _defaultPolygonColor);
             pixel.ContextMenu = _verticleContextMenu;
             _currentPolygon.AddNewVertex(coordinates, pixel);
 
@@ -124,9 +128,9 @@ namespace PolygonFilling
             return false;
         }
 
-        private Rectangle SetPixel(int x, int y, int size = 10)
+        private Rectangle SetPixel(int x, int y, Brush color, int size = 10)
         {
-            Rectangle rectangle = new Rectangle() { Width = size, Height = size, Fill = _defaultPolygonColor };
+            Rectangle rectangle = new Rectangle() { Width = size, Height = size, Fill = color };
             canvas.Children.Add(rectangle);
             Canvas.SetLeft(rectangle, x);
             Canvas.SetTop(rectangle, y);
@@ -185,8 +189,62 @@ namespace PolygonFilling
                     CreateEdgeLine(firstVertex.Coordinates, lastVerticle.Coordinates));
             }
 
+            _currentPolygon.InitializeEdgeTable();
             _polygons.Add(_currentPolygon);
             _currentPolygon = new Polygon();
+        }
+
+        private void ColorPolygonClick(object sender, RoutedEventArgs e)
+        {
+            Polygon polygon = _polygons[0];
+            List<EdgeTableElem> activeEdgeTable = new List<EdgeTableElem>();
+
+            for (int y = polygon.YMin; y < polygon.YMax + 1; y++)
+            {
+                if (polygon.EdgeTable[y].Count != 0)
+                {
+                    activeEdgeTable = polygon.EdgeTable[y].OrderBy(el => el.X).ToList();
+                }
+                polygon.PixelFill.Add(FillScanLineWithColor(activeEdgeTable, y, _defualtFillColor)); 
+                foreach (var edgeTableElem in activeEdgeTable)
+                {
+                    edgeTableElem.X += (int)edgeTableElem.NextXVal;
+                }
+            }
+
+        }
+
+        private List<Rectangle> FillScanLineWithColor(List<EdgeTableElem> activeEdgeTable, int y, Brush color)
+        {
+            var retValue = new List<Rectangle>();
+            if (activeEdgeTable.Count % 2 == 0)
+            {
+                for (int i = 0; i < activeEdgeTable.Count - 1; i += 2)
+                {
+                    retValue.AddRange(ColorPartOfScanLine(activeEdgeTable[i].X, activeEdgeTable[i+1].X, y, color));
+                }
+            }
+            else
+            {
+                for (int i = 0; i < activeEdgeTable.Count - 1; i += 2)
+                {
+                    retValue.AddRange(ColorPartOfScanLine(activeEdgeTable[i].X, activeEdgeTable[i + 1].X, y, color));
+                }
+                retValue.AddRange(ColorPartOfScanLine(activeEdgeTable[activeEdgeTable.Count-1].X, activeEdgeTable[activeEdgeTable.Count - 1].X, y, color));
+            }
+            return retValue;
+        }
+
+        private List<Rectangle> ColorPartOfScanLine(double xLeft, double xRight, int y, Brush color)
+        {
+            var retValue = new List<Rectangle>();
+            double x = xLeft;
+            while (x <= xRight)
+            {
+                retValue.Add(SetPixel((int)x, y, color, 3));
+                x++;
+            }
+            return retValue;
         }
     }
 }
