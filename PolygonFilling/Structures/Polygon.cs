@@ -102,11 +102,34 @@ namespace PolygonFilling.Structures
             }
             foreach (var edge in Edges)
             {
-                double nextxval = ((double)edge.GreaterX - (double)edge.LowerX) / ((double)edge.GreaterY - (double)edge.LowerY);
-                var entry = new EdgeTableElem(edge.GreaterY,edge.LowerX, nextxval);
+                double nextxval = Nacyhylenie(edge) * ((double)edge.GreaterX - (double)edge.LowerX) / ((double)edge.GreaterY - (double)edge.LowerY);
+                EdgeTableElem entry;
+                if (Nacyhylenie(edge) > 0)
+                {
+                    entry = new EdgeTableElem(edge.GreaterY, edge.LowerX, nextxval);
+                }
+                else
+                {
+                    entry = new EdgeTableElem(edge.GreaterY, edge.GreaterX, nextxval);
+                }             
                 int index = edge.LowerY;
                 EdgeTable[index].Add(entry);
             }
+        }
+
+        private double Nacyhylenie(Edge edge)
+        {
+            if (edge.VertexOne.Coordinates.X == edge.VertexTwo.Coordinates.X)
+            {
+                return 0;
+            }
+
+            if((edge.VertexOne.Coordinates.X > edge.VertexTwo.Coordinates.X && edge.VertexOne.Coordinates.Y > edge.VertexTwo.Coordinates.Y ) || (edge.VertexOne.Coordinates.X < edge.VertexTwo.Coordinates.X && edge.VertexOne.Coordinates.Y < edge.VertexTwo.Coordinates.Y))
+            {
+                return 1;
+            }
+
+            return -1;
         }
 
     }
