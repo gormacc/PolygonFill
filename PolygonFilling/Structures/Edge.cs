@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Windows.Documents;
 using System.Windows.Shapes;
 
 namespace PolygonFilling.Structures
@@ -9,26 +11,26 @@ namespace PolygonFilling.Structures
 
         public Vertex VertexTwo { get; set; } = new Vertex() {Id = -1};
 
-        public Line Lin { get; set; } = new Line();
+        public List<LinePixel> Line { get; set; } = new List<LinePixel>();
 
         public Edge()
         {
 
         }
 
-        public Edge(Vertex vertexOne, Vertex vertexTwo, Line line)
+        public Edge(Vertex vertexOne, Vertex vertexTwo, List<LinePixel> line)
         {
             VertexOne = vertexOne;
             VertexTwo = vertexTwo;
-            Lin = line;
+            Line = line;
         }
 
-        public int LowerY => (int)Math.Min(VertexOne.Coordinates.Y, VertexTwo.Coordinates.Y);
+        public int LowerY => (int)Math.Min(VertexOne.Y, VertexTwo.Y);
 
-        public int GreaterY => (int)Math.Max(VertexOne.Coordinates.Y, VertexTwo.Coordinates.Y);
+        public int GreaterY => (int)Math.Max(VertexOne.Y, VertexTwo.Y);
 
-        public int LowerX => (int)Math.Min(VertexOne.Coordinates.X, VertexTwo.Coordinates.X);
+        public int LowerX => (int)Math.Min(VertexOne.X, VertexTwo.X);
 
-        public int GreaterX => (int)Math.Max(VertexOne.Coordinates.X, VertexTwo.Coordinates.X);
+        public int GreaterX => (int)Math.Max(VertexOne.X, VertexTwo.X);
     }
 }

@@ -57,6 +57,7 @@
     </ApplicationDefinition>
     <Compile Include="Structures\Edge.cs" />
     <Compile Include="Structures\EdgeTableElem.cs" />
+    <Compile Include="Structures\LinePixel.cs" />
     <Compile Include="Structures\Polygon.cs" />
     <Compile Include="Structures\Vertex.cs" />
     <Page Include="MainWindow.xaml">

@@ -10,7 +10,9 @@ namespace PolygonFilling.Structures
 {
     public class Vertex
     {
-        public Point Coordinates { get; set; } = new Point();
+        public int X { get; set; } = 0;
+
+        public int Y { get; set; } = 0;
 
         public int Id { get; set; }
 
@@ -24,7 +26,8 @@ namespace PolygonFilling.Structures
         public Vertex(int id, Point coordinates, Rectangle pixel)
         {
             Id = id;
-            Coordinates = coordinates;
+            X = (int)coordinates.X;
+            Y = (int)coordinates.Y;
             Pixel = pixel;
         }
 

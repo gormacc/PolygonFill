@@ -14,7 +14,7 @@ namespace PolygonFilling
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// 
-    /// zrób nachylenie !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    /// trzeba poprawić sortowanie kubełkowe !!!!
     /// 
     /// </summary>
     public partial class MainWindow : Window
@@ -61,25 +61,8 @@ namespace PolygonFilling
                 Vertex vertexOne = _currentPolygon.GetVertexByIndex(index);
                 Vertex vertexTwo = _currentPolygon.GetVertexByIndex(index + 1);
                 _currentPolygon.AddNewEdge(vertexOne,vertexTwo, 
-                    CreateEdgeLine(vertexOne.Coordinates, vertexTwo.Coordinates));
+                    CreateEdgeLine(vertexOne, vertexTwo));
             }
-        }
-
-        private Line CreateEdgeLine(Point p1, Point p2)
-        {
-            Line line = new Line
-            {
-                X1 = p1.X,
-                Y1 = p1.Y,
-                X2 = p2.X,
-                Y2 = p2.Y,
-                Stroke = _defaultPolygonColor,
-                StrokeThickness = 4
-            };
-
-            canvas.Children.Add(line);
-
-            return line;
         }
 
         private void EndPolygon(object sender, RoutedEventArgs e)
@@ -97,7 +80,7 @@ namespace PolygonFilling
                     return;
 
                 _currentPolygon.AddNewEdge(endVerticle, lastVerticle,
-                    CreateEdgeLine(endVerticle.Coordinates, lastVerticle.Coordinates));
+                    CreateEdgeLine(endVerticle, lastVerticle));
 
                 DeleteTail(endVerticle.Id);
                 DrawPolygonToggleButton.IsChecked = false;
@@ -149,7 +132,10 @@ namespace PolygonFilling
             }
             foreach (var edge in edgesToDelete)
             {
-                canvas.Children.Remove(edge.Lin);
+                foreach (var linePixel in edge.Line)
+                {
+                    canvas.Children.Remove(linePixel.Rectangle);
+                }
                 _currentPolygon.Edges.Remove(edge);
             }
         }
@@ -174,7 +160,10 @@ namespace PolygonFilling
             {
                 foreach (var edge in _currentPolygon.Edges)
                 {
-                    canvas.Children.Remove(edge.Lin);
+                    foreach (var linePixel in edge.Line)
+                    {
+                        canvas.Children.Remove(linePixel.Rectangle);
+                    }
                     _currentPolygon = new Polygon();
                     return;
                 }
@@ -186,7 +175,7 @@ namespace PolygonFilling
                 Vertex lastVerticle = _currentPolygon.GetLastVertex();
 
                 _currentPolygon.AddNewEdge(firstVertex, lastVerticle,
-                    CreateEdgeLine(firstVertex.Coordinates, lastVerticle.Coordinates));
+                    CreateEdgeLine(firstVertex, lastVerticle));
             }
 
             _currentPolygon.InitializeEdgeTable();
@@ -205,11 +194,7 @@ namespace PolygonFilling
                 {
                     activeEdgeTable = polygon.EdgeTable[y].OrderBy(el => el.X).ToList();
                 }
-                polygon.PixelFill.Add(FillScanLineWithColor(activeEdgeTable, y, _defualtFillColor)); 
-                foreach (var edgeTableElem in activeEdgeTable)
-                {
-                    edgeTableElem.X += (int)edgeTableElem.NextXVal;
-                }
+                polygon.PixelFill.Add(FillScanLineWithColor(activeEdgeTable, y, _defualtFillColor));
             }
 
         }
@@ -221,7 +206,7 @@ namespace PolygonFilling
             {
                 for (int i = 0; i < activeEdgeTable.Count - 1; i += 2)
                 {
-                    retValue.AddRange(ColorPartOfScanLine(activeEdgeTable[i].X, activeEdgeTable[i+1].X, y, color));
+                    retValue.AddRange(ColorPartOfScanLine(activeEdgeTable[i].Table[y], activeEdgeTable[i + 1].Table[y], y, color));
                 }
             }
             else
@@ -230,12 +215,12 @@ namespace PolygonFilling
                 {
                     retValue.AddRange(ColorPartOfScanLine(activeEdgeTable[i].X, activeEdgeTable[i + 1].X, y, color));
                 }
-                retValue.AddRange(ColorPartOfScanLine(activeEdgeTable[activeEdgeTable.Count-1].X, activeEdgeTable[activeEdgeTable.Count - 1].X, y, color));
+                retValue.AddRange(ColorPartOfScanLine(activeEdgeTable[activeEdgeTable.Count - 1].Table[y], activeEdgeTable[activeEdgeTable.Count - 1].Table[y], y, color));
             }
             return retValue;
         }
 
-        private List<Rectangle> ColorPartOfScanLine(double xLeft, double xRight, int y, Brush color)
+        private List<Rectangle> ColorPartOfScanLine(int xLeft, int xRight, int y, Brush color)
         {
             var retValue = new List<Rectangle>();
             double x = xLeft;
@@ -245,6 +230,98 @@ namespace PolygonFilling
                 x++;
             }
             return retValue;
+        }
+
+        private List<LinePixel> CreateEdgeLine(Vertex v1, Vertex v2, int size = 4)
+        {
+            int x1 = v1.X;
+            int x2 = v2.X;
+            int y1 = v1.Y;
+            int y2 = v2.Y;
+
+            List<LinePixel> listOfRectangles = new List<LinePixel>();
+
+            int d, dx, dy, ai, bi, xi, yi;
+            int x = x1, y = y1;
+            // ustalenie kierunku rysowania
+            if (x1 < x2)
+            {
+                xi = 1;
+                dx = x2 - x1;
+            }
+            else
+            {
+                xi = -1;
+                dx = x1 - x2;
+            }
+            // ustalenie kierunku rysowania
+            if (y1 < y2)
+            {
+                yi = 1;
+                dy = y2 - y1;
+            }
+            else
+            {
+                yi = -1;
+                dy = y1 - y2;
+            }
+
+            // pierwszy piksel
+            Rectangle rectangle;
+            rectangle = SetPixel(x, y, _defaultPolygonColor, size);
+            listOfRectangles.Add(new LinePixel(x,y,rectangle));            
+
+            // oś wiodąca OX
+            if (dx > dy)
+            {
+                ai = (dy - dx) * 2;
+                bi = dy * 2;
+                d = bi - dx;
+                // pętla po kolejnych x
+                while (x != x2)
+                {
+                    // test współczynnika
+                    if (d >= 0)
+                    {
+                        x += xi;
+                        y += yi;
+                        d += ai;
+                    }
+                    else
+                    {
+                        d += bi;
+                        x += xi;
+                    }
+                    rectangle = SetPixel(x, y, _defaultPolygonColor, size);
+                    listOfRectangles.Add(new LinePixel(x, y, rectangle));
+                }
+            }
+            // oś wiodąca OY
+            else
+            {
+                ai = (dx - dy) * 2;
+                bi = dx * 2;
+                d = bi - dy;
+                // pętla po kolejnych y
+                while (y != y2)
+                {
+                    // test współczynnika
+                    if (d >= 0)
+                    {
+                        x += xi;
+                        y += yi;
+                        d += ai;
+                    }
+                    else
+                    {
+                        d += bi;
+                        y += yi;
+                    }
+                    rectangle = SetPixel(x, y, _defaultPolygonColor, size);
+                    listOfRectangles.Add(new LinePixel(x, y, rectangle));
+                }
+            }
+            return listOfRectangles;
         }
     }
 }

@@ -35,7 +35,7 @@ namespace PolygonFilling.Structures
             Edges = edges;
         }
 
-        public void AddNewEdge(Vertex vertexOne, Vertex vertexTwo, Line line)
+        public void AddNewEdge(Vertex vertexOne, Vertex vertexTwo, List<LinePixel> line)
         {
             Edges.Add(new Edge(vertexOne, vertexTwo, line));
         }
@@ -102,16 +102,16 @@ namespace PolygonFilling.Structures
             }
             foreach (var edge in Edges)
             {
-                double nextxval = Nacyhylenie(edge) * ((double)edge.GreaterX - (double)edge.LowerX) / ((double)edge.GreaterY - (double)edge.LowerY);
-                EdgeTableElem entry;
-                if (Nacyhylenie(edge) > 0)
+                int[] table = new int[edge.GreaterY + 1];
+                for (int i = 0; i < edge.GreaterY + 1; i++)
                 {
-                    entry = new EdgeTableElem(edge.GreaterY, edge.LowerX, nextxval);
+                    table[i] = 0;
                 }
-                else
+                foreach (var linePixel in edge.Line)
                 {
-                    entry = new EdgeTableElem(edge.GreaterY, edge.GreaterX, nextxval);
-                }             
+                    table[linePixel.Y] = linePixel.X;
+                }
+                EdgeTableElem entry = new EdgeTableElem(edge.GreaterY, Nacyhylenie(edge) == 0 ? edge.LowerX : edge.GreaterX , table);     
                 int index = edge.LowerY;
                 EdgeTable[index].Add(entry);
             }
@@ -119,12 +119,12 @@ namespace PolygonFilling.Structures
 
         private double Nacyhylenie(Edge edge)
         {
-            if (edge.VertexOne.Coordinates.X == edge.VertexTwo.Coordinates.X)
+            if (edge.VertexOne.X == edge.VertexTwo.X)
             {
                 return 0;
             }
 
-            if((edge.VertexOne.Coordinates.X > edge.VertexTwo.Coordinates.X && edge.VertexOne.Coordinates.Y > edge.VertexTwo.Coordinates.Y ) || (edge.VertexOne.Coordinates.X < edge.VertexTwo.Coordinates.X && edge.VertexOne.Coordinates.Y < edge.VertexTwo.Coordinates.Y))
+            if((edge.VertexOne.X > edge.VertexTwo.X && edge.VertexOne.Y > edge.VertexTwo.Y ) || (edge.VertexOne.X < edge.VertexTwo.X && edge.VertexOne.Y < edge.VertexTwo.Y))
             {
                 return 1;
             }
