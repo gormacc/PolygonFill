@@ -17,13 +17,16 @@ namespace PolygonFilling
     /// trzeba poprawić sortowanie kubełkowe !!!!
     /// 
     /// </summary>
-    public partial class MainWindow : Window
+    public partial class MainWindow
     {
-        private List<Polygon> _polygons = new List<Polygon>();
+        private readonly List<Polygon> _polygons = new List<Polygon>();
         private Polygon _currentPolygon = new Polygon();
+        private Polygon _selectedPolygon = new Polygon();
+        private int _selectedPolygonIndex;
         private readonly Brush _defaultPolygonColor = Brushes.Black;
         private readonly ContextMenu _verticleContextMenu = new ContextMenu();
         private Brush _fillColor = Brushes.Red;
+        private readonly Brush _defaultSelectedPolygonColor = Brushes.Green;
 
         public MainWindow()
         {
@@ -70,8 +73,7 @@ namespace PolygonFilling
             if (_currentPolygon.Vertexes.Count < 3)
                 return;
 
-            Rectangle pix;
-            if (CheckMenuItem(sender, out pix))
+            if (CheckMenuItem(sender, out var pix))
             {
                 Vertex endVerticle = _currentPolygon.GetVertexByPixel(pix);
                 Vertex lastVerticle = _currentPolygon.GetLastVertex();
@@ -83,8 +85,7 @@ namespace PolygonFilling
                     CreateEdgeLine(endVerticle, lastVerticle));
 
                 DeleteTail(endVerticle.Id);
-                DrawPolygonToggleButton.IsChecked = false;
-                
+                DrawPolygonToggleButton.IsChecked = false;               
             }
         }
 
@@ -100,8 +101,7 @@ namespace PolygonFilling
 
         private bool CheckMenuItem(object menuItemToCheck, out Rectangle rc)
         {
-            MenuItem mi = menuItemToCheck as MenuItem;
-            if (mi != null)
+            if (menuItemToCheck is MenuItem mi)
             {
                 rc = ((ContextMenu)mi.Parent).PlacementTarget as Rectangle;
                 return true;
@@ -163,10 +163,10 @@ namespace PolygonFilling
                     foreach (var linePixel in edge.Line)
                     {
                         canvas.Children.Remove(linePixel.Rectangle);
-                    }
-                    _currentPolygon = new Polygon();
-                    return;
+                    }                   
                 }
+                _currentPolygon = new Polygon();
+                return;
             }
 
             if (_currentPolygon.Vertexes.Count != _currentPolygon.Edges.Count)
@@ -181,11 +181,16 @@ namespace PolygonFilling
             _currentPolygon.InitializeEdgeTable();
             _polygons.Add(_currentPolygon);
             _currentPolygon = new Polygon();
+
+            ColorPolygonEdges(_selectedPolygon, _defaultPolygonColor);
+            _selectedPolygonIndex = _polygons.Count - 1;
+            _selectedPolygon = _polygons[_selectedPolygonIndex];
+            ColorPolygonEdges(_selectedPolygon, _defaultSelectedPolygonColor);
         }
 
         private void ColorPolygonClick(object sender, RoutedEventArgs e)
         {
-            Polygon polygon = _polygons[0];
+            Polygon polygon = _selectedPolygon;
             List<EdgeTableElem> activeEdgeTable = new List<EdgeTableElem>();
 
             for (int y = polygon.YMin; y < polygon.YMax + 1; y++)
@@ -267,8 +272,7 @@ namespace PolygonFilling
             }
 
             // pierwszy piksel
-            Rectangle rectangle;
-            rectangle = SetPixel(x, y, _defaultPolygonColor, size);
+            var rectangle = SetPixel(x, y, _defaultPolygonColor, size);
             listOfRectangles.Add(new LinePixel(x,y,rectangle));            
 
             // oś wiodąca OX
@@ -330,6 +334,39 @@ namespace PolygonFilling
             {
                 _fillColor = new SolidColorBrush((Color)PolygonFillColorPicker.SelectedColor);
             }            
+        }
+
+        private void SelectPrevPolygon(object sender, RoutedEventArgs e)
+        {
+            if (_selectedPolygonIndex > 0)
+            {
+                ColorPolygonEdges(_selectedPolygon, _defaultPolygonColor);
+                _selectedPolygonIndex -= 1;
+                _selectedPolygon = _polygons[_selectedPolygonIndex];
+                ColorPolygonEdges(_selectedPolygon, _defaultSelectedPolygonColor);
+            }
+        }
+
+        private void SelectNextPolygon(object sender, RoutedEventArgs e)
+        {
+            if (_selectedPolygonIndex < _polygons.Count - 1)
+            {
+                ColorPolygonEdges(_selectedPolygon, _defaultPolygonColor);
+                _selectedPolygonIndex += 1;
+                _selectedPolygon = _polygons[_selectedPolygonIndex];
+                ColorPolygonEdges(_selectedPolygon, _defaultSelectedPolygonColor);
+            }
+        }
+
+        private void ColorPolygonEdges(Polygon polygon, Brush color)
+        {
+            foreach (var edge in polygon.Edges)
+            {
+                foreach (var linePixel in edge.Line)
+                {
+                    linePixel.Rectangle.Fill = color;
+                }
+            }
         }
     }
 }

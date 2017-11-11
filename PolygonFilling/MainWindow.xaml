@@ -19,7 +19,14 @@
             <Button Name="ClearCanvasButton" Click="ClearCanvas" Content="Wyczysc" Margin="10,20" />
             <ToggleButton Name="DrawPolygonToggleButton" Checked="StartDrawingPolygon" Unchecked="EndDrawingPolygon" Content="Narysuj wielokat" Margin="10,20" />
             <Button Name="ColorPolygon" Click="ColorPolygonClick" Content="Koloruj" Margin="10,20" />
-            <xctk:ColorPicker Name="PolygonFillColorPicker" SelectedColor="Red" SelectedColorChanged="PickedColorChanged"></xctk:ColorPicker>
+            <xctk:ColorPicker Name="PolygonFillColorPicker" SelectedColor="Red" SelectedColorChanged="PickedColorChanged" Margin="10,20"/>
+            <StackPanel Margin="10,20">
+                <TextBlock Text="Wybór zaznaczonego wielokąta"/>
+                <StackPanel Orientation="Horizontal" Margin="10,0">
+                    <Button Content="Prev" Click="SelectPrevPolygon" HorizontalAlignment="Left"/>
+                    <Button Content="Next" Click="SelectNextPolygon" HorizontalAlignment="Right"/>
+                </StackPanel>
+            </StackPanel>
         </StackPanel>
     </Grid>
 </Window>
