@@ -23,7 +23,7 @@ namespace PolygonFilling
         private Polygon _currentPolygon = new Polygon();
         private readonly Brush _defaultPolygonColor = Brushes.Black;
         private readonly ContextMenu _verticleContextMenu = new ContextMenu();
-        private readonly Brush _defualtFillColor = Brushes.Red;
+        private Brush _fillColor = Brushes.Red;
 
         public MainWindow()
         {
@@ -194,7 +194,7 @@ namespace PolygonFilling
                 {
                     activeEdgeTable = polygon.EdgeTable[y].OrderBy(el => el.X).ToList();
                 }
-                polygon.PixelFill.Add(FillScanLineWithColor(activeEdgeTable, y, _defualtFillColor));
+                polygon.PixelFill.Add(FillScanLineWithColor(activeEdgeTable, y, _fillColor));
             }
 
         }
@@ -322,6 +322,14 @@ namespace PolygonFilling
                 }
             }
             return listOfRectangles;
+        }
+
+        private void PickedColorChanged(object sender, RoutedPropertyChangedEventArgs<Color?> e)
+        {
+            if (PolygonFillColorPicker.SelectedColor != null)
+            {
+                _fillColor = new SolidColorBrush((Color)PolygonFillColorPicker.SelectedColor);
+            }            
         }
     }
 }

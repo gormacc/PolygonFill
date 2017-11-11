@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PolygonFilling"
+        xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
         mc:Ignorable="d"
         Title="MainWindow" Height="350" Width="525"
         WindowState="Maximized">
@@ -18,6 +19,7 @@
             <Button Name="ClearCanvasButton" Click="ClearCanvas" Content="Wyczysc" Margin="10,20" />
             <ToggleButton Name="DrawPolygonToggleButton" Checked="StartDrawingPolygon" Unchecked="EndDrawingPolygon" Content="Narysuj wielokat" Margin="10,20" />
             <Button Name="ColorPolygon" Click="ColorPolygonClick" Content="Koloruj" Margin="10,20" />
+            <xctk:ColorPicker Name="PolygonFillColorPicker" SelectedColor="Red" SelectedColorChanged="PickedColorChanged"></xctk:ColorPicker>
         </StackPanel>
     </Grid>
 </Window>

@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Shapes;
 
@@ -111,13 +108,15 @@ namespace PolygonFilling.Structures
                 {
                     table[linePixel.Y] = linePixel.X;
                 }
-                EdgeTableElem entry = new EdgeTableElem(edge.GreaterY, Nacyhylenie(edge) == 0 ? edge.LowerX : edge.GreaterX , table);     
-                int index = edge.LowerY;
-                EdgeTable[index].Add(entry);
+                EdgeTableElem entry = new EdgeTableElem(edge.GreaterY, Nacyhylenie(edge) == 0 ? edge.LowerX : edge.GreaterX , table);
+                for (int i = edge.LowerY; i < edge.GreaterY; i++)
+                {
+                    EdgeTable[i].Add(entry);
+                }
             }
         }
 
-        private double Nacyhylenie(Edge edge)
+        private int Nacyhylenie(Edge edge)
         {
             if (edge.VertexOne.X == edge.VertexTwo.X)
             {
