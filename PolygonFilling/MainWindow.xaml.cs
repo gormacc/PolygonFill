@@ -338,6 +338,8 @@ namespace PolygonFilling
 
         private void SelectPrevPolygon(object sender, RoutedEventArgs e)
         {
+            if(_polygons.Count == 0) return;
+
             if (_selectedPolygonIndex > 0)
             {
                 ColorPolygonEdges(_selectedPolygon, _defaultPolygonColor);
@@ -349,6 +351,8 @@ namespace PolygonFilling
 
         private void SelectNextPolygon(object sender, RoutedEventArgs e)
         {
+            if (_polygons.Count == 0) return;
+
             if (_selectedPolygonIndex < _polygons.Count - 1)
             {
                 ColorPolygonEdges(_selectedPolygon, _defaultPolygonColor);
@@ -369,7 +373,7 @@ namespace PolygonFilling
             }
         }
 
-        private Point Intersection(Edge e1, Edge e2) // zwraca koordynaty punktu przeciecia
+        private Point GetIntersectionCoordinates(Edge e1, Edge e2)
         {
             int x1 = e1.VertexOne.X;
             int y1 = e1.VertexOne.Y;
@@ -390,6 +394,91 @@ namespace PolygonFilling
                     (((x1 - x2) * (y3 - y4)) - ((y1 - y2) * (x3 - x4)));
 
             return new Point(x, y);
+        }
+
+        private void SortVertexesClockwise(List<Vertex> vertexesList)
+        {
+            int x = int.MaxValue;
+            int y = int.MaxValue;
+            Vertex v = vertexesList.FirstOrDefault();
+            foreach (var vertex in vertexesList)
+            {
+                if (vertex.X < x || vertex.Y < y)
+                {
+                    v = vertex;
+                    x = vertex.X;
+                    y = vertex.Y;
+                }
+            }
+
+            int index = vertexesList.IndexOf(v);
+            int nextIndex = index + 1;
+
+            if (nextIndex > vertexesList.Count - 1)
+            {
+                nextIndex = 0;
+            }
+
+            Vertex v1 = vertexesList[index];
+            Vertex v2 = vertexesList[nextIndex];
+
+            if (Det(v1,v2) < 0)
+            {
+                vertexesList.Reverse();
+            }
+        }
+
+        private int Det(Vertex v1, Vertex v2)
+        {
+            return ((v1.X * v2.Y) - (v1.Y * v2.X));
+        }
+
+        private double Det(Point p1, Point p2)
+        {
+            return ((p1.X * p2.Y) - (p1.Y * p2.X));
+        }
+
+        private bool CheckIfCanIntersect(Edge e1, Edge e2)
+        {
+            Point p = new Point(e1.VertexOne.X, e1.VertexOne.Y);
+            Point r = new Point(e1.VertexTwo.X - p.X, e1.VertexTwo.Y - p.Y);
+            Point q = new Point(e2.VertexOne.X, e2.VertexOne.Y);
+            Point s = new Point(e2.VertexTwo.X - q.X, e2.VertexTwo.Y - q.Y);
+
+            double t = Det(new Point(q.X - p.X, q.Y - p.Y), s) / Det(r, s);
+            double u = Det(new Point(q.X - p.X, q.Y - p.Y), r) / Det(r, s);
+
+            return (u > 0 && u < 1) && (t > 0 && t < 1);
+        }
+
+        private void GenerateListsWithIntersectionPoints(Polygon polygonOne, Polygon polygonTwo , out List<Vertex> vertexesOne, out List<Vertex> vertexesTwo)
+        {
+            vertexesOne = new List<Vertex>(polygonOne.Vertexes);
+            vertexesTwo = new List<Vertex>(polygonTwo.Vertexes);
+
+            foreach (var edgeOne in polygonOne.Edges)
+            {
+                foreach (var edgeTwo in polygonTwo.Edges)
+                {
+                    if (CheckIfCanIntersect(edgeOne, edgeTwo))
+                    {
+                        Point coordinates = GetIntersectionCoordinates(edgeOne, edgeTwo);
+
+                        Vertex vOne = new Vertex(vertexesOne.Count, coordinates, new Rectangle());
+                        Vertex firstVertexOne = edgeOne.VertexOne.Id < edgeOne.VertexTwo.Id ? edgeOne.VertexOne : edgeOne.VertexTwo;
+                        int indexOne = vertexesOne.IndexOf(firstVertexOne);
+                        vertexesOne.Insert(indexOne, vOne);
+
+                        Vertex vTwo = new Vertex(vertexesTwo.Count, coordinates, new Rectangle());
+                        Vertex firstVertexTwo = edgeTwo.VertexOne.Id < edgeTwo.VertexTwo.Id ? edgeTwo.VertexOne : edgeTwo.VertexTwo;
+                        int indexTwo = vertexesTwo.IndexOf(firstVertexTwo);
+                        vertexesOne.Insert(indexTwo, vTwo);
+                    }
+                }
+            }
+
+            SortVertexesClockwise(vertexesOne);
+            SortVertexesClockwise(vertexesTwo);
         }
     }
 }

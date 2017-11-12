@@ -18,6 +18,10 @@ namespace PolygonFilling.Structures
 
         public Rectangle Pixel { get; set; } = new Rectangle();
 
+        public bool IsIntersected { get; set; } = false;
+
+        public bool IsVisited { get; set; } = false;
+
         public Vertex()
         {
             
