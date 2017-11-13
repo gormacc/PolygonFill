@@ -27,6 +27,24 @@
                     <Button Content="Next" Click="SelectNextPolygon" HorizontalAlignment="Right"/>
                 </StackPanel>
             </StackPanel>
+            <ToggleButton Name="ClipPolygonsToggleButton" Checked="StartClippingPolygons" Unchecked="EndClippingPolygons" Content="Wycinanie" Margin="10,20"></ToggleButton>
+            <StackPanel Name="ClippingPolygonsStackPanel" Visibility="Collapsed">
+                <StackPanel Margin="10,20">
+                    <TextBlock Text="Wybór pierwszego wycinanego wielokąta"/>
+                    <StackPanel Orientation="Horizontal" Margin="10,0">
+                        <Button Content="Prev" Click="SelectPreviousClippingPolygonOne" HorizontalAlignment="Left"/>
+                        <Button Content="Next" Click="SelectNextClippingPolygonOne" HorizontalAlignment="Right"/>
+                    </StackPanel>
+                </StackPanel>
+                <StackPanel Margin="10,20">
+                    <TextBlock Text="Wybór drugiego wycinanego wielokąta"/>
+                    <StackPanel Orientation="Horizontal" Margin="10,0">
+                        <Button Content="Prev" Click="SelectPreviousClippingPolygonTwo" HorizontalAlignment="Left"/>
+                        <Button Content="Next" Click="SelectNextClippingPolygonTwo" HorizontalAlignment="Right"/>
+                    </StackPanel>
+                </StackPanel>
+                <Button Name="ClipPolygonsButton" Click="ClipPolygons" Content="Wytnij" Margin="10,20" />
+            </StackPanel>
         </StackPanel>
     </Grid>
 </Window>
