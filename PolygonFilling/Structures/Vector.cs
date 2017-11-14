@@ -35,6 +35,17 @@ namespace PolygonFilling.Structures
             Z = (double)b / RgbCount;
         }
 
+        public Vector(System.Drawing.Color color)
+        {
+            int r = color.R;
+            int g = color.G;
+            int b = color.B;
+
+            X = (double)r / RgbCount;
+            Y = (double)g / RgbCount;
+            Z = (double)b / RgbCount;
+        }
+
         public Vector Normalize()
         {
             double divisor = Math.Sqrt((X * X) + (Y * Y) + (Z * Z));

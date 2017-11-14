@@ -47,7 +47,9 @@ namespace PolygonFilling
         private readonly Brush _defaultSelectedPolygonColor = Brushes.Green;
 
         //boole
-        private bool _isColorInsteadOfTexture = true;
+        private bool _isColorInsteadOfTexturePolygonFill = true;
+        private bool _isDefaultInsteadOfTextureNormalVector = true;
+        private bool _isDefaultInsteadOfTextureHeightMap = true;
 
         //wektory
         private Vector _lightVersor = new Vector(0,0,1);
@@ -58,6 +60,14 @@ namespace PolygonFilling
         private string _defaultFillTextureFileName = "zlota_tekstura.jpg";
         private BitmapImage _fillPolygonTextureBitmapImage;
         private Bitmap _fillPolygonTexture;
+
+        private string _defaultNormalVectorFileName = "normal_map.jpg";
+        private BitmapImage _normalVectorBitmapImage;
+        private Bitmap _normalVectorTexture;
+
+        private string _defaultHeightMapFileName = "brick_heightmap.png";
+        private BitmapImage _heightMapBitmapImage;
+        private Bitmap _heightMapTexture;
 
         public MainWindow()
         {
@@ -80,8 +90,19 @@ namespace PolygonFilling
             FillPolygonTextureImage.Source = bmp;
             FillPolygonTextureImage.Height = 50;
             FillPolygonTextureImage.Width = 50;
+            _fillPolygonTextureBitmapImage = bmp;
 
-            _fillPolygonTextureBitmapImage = bmp;           
+            BitmapImage bmp2 = ConvertFileToBitmapImage(_defaultNormalVectorFileName, false);
+            NormalVectorTextureImage.Source = bmp2;
+            NormalVectorTextureImage.Height = 50;
+            NormalVectorTextureImage.Width = 50;
+            _normalVectorBitmapImage = bmp2;
+
+            BitmapImage bmp3 = ConvertFileToBitmapImage(_defaultHeightMapFileName, false);
+            HeightMapTextureImage.Source = bmp3;
+            HeightMapTextureImage.Height = 50;
+            HeightMapTextureImage.Width = 50;
+            _heightMapBitmapImage = bmp3;
         }
 
         public Bitmap ConvertImageToBitmap(BitmapImage bitmapImage, int height, int width)
@@ -262,62 +283,100 @@ namespace PolygonFilling
             ColorPolygonEdges(_selectedPolygon, _defaultSelectedPolygonColor);
         }
 
+        private int _currentY = 0;
+
         private void ColorPolygonClick(object sender, RoutedEventArgs e)
         {
             if(_selectedPolygon == null) return;
 
             Polygon polygon = _selectedPolygon;
 
-            if (!_isColorInsteadOfTexture)
-            {
-                _fillPolygonTexture = ConvertImageToBitmap(_fillPolygonTextureBitmapImage, (int)Canvas.ActualHeight, (int)Canvas.ActualWidth);
-            }
-            Brush color = LambertFormula();            
+            InitializeTexturesBeforeColoring();          
 
             List <EdgeTableElem> activeEdgeTable = new List<EdgeTableElem>();
 
             for (int y = polygon.YMin; y < polygon.YMax + 1; y+= 4)
             {
+                _currentY = y;
                 if (polygon.EdgeTable[y].Count != 0)
                 {
                     activeEdgeTable = polygon.EdgeTable[y].OrderBy(el => el.X).ToList();
                 }
-                polygon.PixelFill.Add(FillScanLineWithColor(activeEdgeTable, y,color));
+                polygon.PixelFill.Add(FillScanLineWithColor(activeEdgeTable));
             }
 
         }
 
-        private List<Rectangle> FillScanLineWithColor(List<EdgeTableElem> activeEdgeTable, int y, Brush color)
+        private void InitializeTexturesBeforeColoring()
+        {
+            if (!_isColorInsteadOfTexturePolygonFill)
+            {
+                _fillPolygonTexture = ConvertImageToBitmap(_fillPolygonTextureBitmapImage, (int)Canvas.ActualHeight, (int)Canvas.ActualWidth);
+            }
+
+            if (!_isDefaultInsteadOfTextureNormalVector)
+            {
+                _normalVectorTexture = ConvertImageToBitmap(_normalVectorBitmapImage,
+                    _selectedPolygon.YMax - _selectedPolygon.YMin, _selectedPolygon.XMax - _selectedPolygon.XMin);
+            }
+
+            if (!_isDefaultInsteadOfTextureHeightMap)
+            {
+                _heightMapTexture = ConvertImageToBitmap(_heightMapBitmapImage,
+                    _selectedPolygon.YMax - _selectedPolygon.YMin, _selectedPolygon.XMax - _selectedPolygon.XMin);
+            }
+        }
+
+
+        private List<Rectangle> FillScanLineWithColor(List<EdgeTableElem> activeEdgeTable)
         {
             var retValue = new List<Rectangle>();
 
             for (int i = 0; i < activeEdgeTable.Count - 1; i += 2)
             {
-                retValue.AddRange(ColorPartOfScanLine(activeEdgeTable[i].Table[y], activeEdgeTable[i + 1].Table[y], y, color));
+                retValue.AddRange(ColorPartOfScanLine(activeEdgeTable[i].Table[_currentY], activeEdgeTable[i + 1].Table[_currentY]));
             }
 
             return retValue;
         }
 
-        private List<Rectangle> ColorPartOfScanLine(int xLeft, int xRight, int y,Brush color)
+        private List<Rectangle> ColorPartOfScanLine(int xLeft, int xRight)
         {
             var retValue = new List<Rectangle>();
             int x = xLeft;
 
             while (x <= xRight)
             {
-                if (_isColorInsteadOfTexture)
+                if (_isColorInsteadOfTexturePolygonFill)
                 {
-                    retValue.Add(SetPixel(x, y, color, 5));
+                    if (!_isDefaultInsteadOfTextureNormalVector) SetNewNormalVector(x, _currentY);
+
+                    if(!_isDefaultInsteadOfTextureHeightMap) SetNewDisturbVector(x, _currentY);
+
+                    var color = LambertFormula();
+                    retValue.Add(SetPixel(x, _currentY, color, 5));
                 }
                 else
                 {
-                    retValue.Add(SetPixel(x, y, GetTexturePixel(x,y) , 5));
+                    retValue.Add(SetPixel(x, _currentY, GetTexturePixel(x, _currentY) , 5));
                 }
                 
                 x+= 4;
             }
             return retValue;
+        }
+
+        private void SetNewNormalVector(int x, int y)
+        {
+            System.Drawing.Color newColor = _normalVectorTexture.GetPixel(
+                Math.Min(Math.Max(x - _selectedPolygon.XMin, 1), _normalVectorTexture.Width - 1) ,
+                Math.Min(Math.Max(y - _selectedPolygon.YMin, 1), _normalVectorTexture.Height - 1) );
+            _normalVector = new Vector(newColor);
+        }
+
+        private void SetNewDisturbVector(int x, int y)
+        {
+            // uzupełnij 
         }
 
         private Brush GetTexturePixel(int x, int y)
@@ -793,14 +852,6 @@ namespace PolygonFilling
             }
         }
 
-        private Brush GetCurrentPixelColor(int x, int y)
-        {
-
-
-
-            return new SolidColorBrush();
-        }
-
         private Brush LambertFormula()
         {
             int rgbCount = 255;
@@ -828,6 +879,8 @@ namespace PolygonFilling
             return new SolidColorBrush(color);
         }
 
+        #region GUI
+
         private void LightColorChanged(object sender, RoutedPropertyChangedEventArgs<Color?> e)
         {
             if (LightColorPicker.SelectedColor != null)
@@ -839,10 +892,10 @@ namespace PolygonFilling
         public void LoadFillPolygonTexture(object sender, RoutedEventArgs e)
         {
             var openFileDialog = new OpenFileDialog
-                {
-                    Filter = "JPG (*.jpg)|*.jpg|PNG (*.png)|*.png|BMP (*.bmp)|*.bmp",
-                    InitialDirectory = Directory.GetCurrentDirectory()
-                };
+            {
+                Filter = "JPG (*.jpg)|*.jpg|PNG (*.png)|*.png|BMP (*.bmp)|*.bmp",
+                InitialDirectory = Directory.GetCurrentDirectory()
+            };
 
             if (openFileDialog.ShowDialog() == true)
             {
@@ -855,18 +908,83 @@ namespace PolygonFilling
 
                 _fillPolygonTextureBitmapImage = bmp;
             }
-                
+        }
 
+        public void LoadNormalVectorTexture(object sender, RoutedEventArgs e)
+        {
+            var openFileDialog = new OpenFileDialog
+            {
+                Filter = "JPG (*.jpg)|*.jpg|PNG (*.png)|*.png|BMP (*.bmp)|*.bmp",
+                InitialDirectory = Directory.GetCurrentDirectory()
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                string path = openFileDialog.FileName;
+
+                BitmapImage bmp2 = ConvertFileToBitmapImage(path, true);
+                NormalVectorTextureImage.Source = bmp2;
+                NormalVectorTextureImage.Height = 50;
+                NormalVectorTextureImage.Width = 50;
+                _normalVectorBitmapImage = bmp2;
+
+                _normalVectorBitmapImage = bmp2;
+            }
+        }
+
+        public void LoadHeightMapTexture(object sender, RoutedEventArgs e) // napraw
+        {
+            var openFileDialog = new OpenFileDialog
+            {
+                Filter = "JPG (*.jpg)|*.jpg|PNG (*.png)|*.png|BMP (*.bmp)|*.bmp",
+                InitialDirectory = Directory.GetCurrentDirectory()
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                string path = openFileDialog.FileName;
+
+                BitmapImage bmp3 = ConvertFileToBitmapImage(path, true);
+                HeightMapTextureImage.Source = bmp3;
+                HeightMapTextureImage.Height = 50;
+                HeightMapTextureImage.Width = 50;
+
+                _heightMapBitmapImage = bmp3;
+            }
         }
 
         private void ChooseColorFillPolygon(object sender, RoutedEventArgs e)
         {
-            _isColorInsteadOfTexture = true;
+            _isColorInsteadOfTexturePolygonFill = true;
         }
 
         private void ChooseTextureFillPolygon(object sender, RoutedEventArgs e)
         {
-            _isColorInsteadOfTexture = false;
+            _isColorInsteadOfTexturePolygonFill = false;
         }
+
+        private void ChooseDefaultNormalVector(object sender, RoutedEventArgs e)
+        {
+            _isDefaultInsteadOfTextureNormalVector = true;
+        }
+
+        private void ChooseTextureNormalVector(object sender, RoutedEventArgs e)
+        {
+            _isDefaultInsteadOfTextureNormalVector = false;
+        }
+
+        private void ChooseDefaultHeightMap(object sender, RoutedEventArgs e)
+        {
+            _isDefaultInsteadOfTextureHeightMap = true;
+        }
+
+        private void ChooseTextureHeightMap(object sender, RoutedEventArgs e)
+        {
+            _isDefaultInsteadOfTextureHeightMap = false;
+        }
+
+        #endregion
+
+
     }
 }

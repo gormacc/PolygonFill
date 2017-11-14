@@ -24,11 +24,11 @@
 
             <StackPanel Margin="10,20">
                 <DockPanel>
-                    <StackPanel DockPanel.Dock="Left" Margin="0,0,20,0">
+                    <StackPanel DockPanel.Dock="Left" Margin="0,0,50,0">
                         <TextBlock Text="PolygonFillColor"></TextBlock>
                         <xctk:ColorPicker Name="PolygonFillColorPicker" SelectedColor="Red" SelectedColorChanged="PolygonFillColorChanged" />
                     </StackPanel>
-                    <StackPanel DockPanel.Dock="Right">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                         <Image Name="FillPolygonTextureImage"/>
                         <Button Name="LoadFillPolygonTextureButton" Content="Load Texture" Click="LoadFillPolygonTexture"/>
                     </StackPanel>
@@ -38,12 +38,40 @@
                     <RadioButton Content="Tekstura" Checked="ChooseTextureFillPolygon" GroupName="PolygonFillColorOrTexture"/>
                 </StackPanel>
             </StackPanel>
-            
-            <StackPanel Margin="10,20">
+
+            <StackPanel Orientation="Horizontal" Margin="10,20">
                 <TextBlock Text="LightColor"></TextBlock>
                 <xctk:ColorPicker Name="LightColorPicker" SelectedColor="White" SelectedColorChanged="LightColorChanged" />
             </StackPanel>
-            
+
+            <StackPanel Margin="10,20">
+                <TextBlock Text="Wektor normalny"></TextBlock>
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Left" Margin="0,0,50,0">
+                        <RadioButton Content="Stały" IsChecked="True" Checked="ChooseDefaultNormalVector" GroupName="NormalVectorDefaultOrTexture"/>
+                        <RadioButton Content="Tekstura" Checked="ChooseTextureNormalVector" GroupName="NormalVectorDefaultOrTexture"/>
+                    </StackPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                        <Image Name="NormalVectorTextureImage"/>
+                        <Button Name="LoadNormalVectorTextureButton" Content="Load Texture" Click="LoadNormalVectorTexture"/>
+                    </StackPanel>
+                </DockPanel>
+            </StackPanel>
+
+            <StackPanel Margin="10,20">
+                <TextBlock Text="Mapa wysokości"></TextBlock>
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Left" Margin="0,0,50,0">
+                        <RadioButton Content="Stały" IsChecked="True" Checked="ChooseDefaultHeightMap" GroupName="HeightMapDefaultOrTexture"/>
+                        <RadioButton Content="Tekstura" Checked="ChooseTextureHeightMap" GroupName="HeightMapDefaultOrTexture"/>
+                    </StackPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                        <Image Name="HeightMapTextureImage"/>
+                        <Button Name="LoadHeightMapTextureButton" Content="Load Texture" Click="LoadHeightMapTexture"/>
+                    </StackPanel>
+                </DockPanel>
+            </StackPanel>
+
             <StackPanel Margin="10,20" Orientation="Horizontal">
                 <TextBlock Text="Wybór zaznaczonego wielokąta"/>
                 <Button Content="Prev" Click="SelectPrevPolygon" Margin="10,0"/>
