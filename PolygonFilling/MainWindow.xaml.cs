@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using PolygonFilling.Structures;
 using Brush = System.Windows.Media.Brush;
 using Brushes = System.Windows.Media.Brushes;
@@ -20,7 +22,7 @@ namespace PolygonFilling
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// 
-    /// trzeba poprawić sortowanie kubełkowe !!!!
+    ///
     /// 
     /// </summary>
     public partial class MainWindow
@@ -43,18 +45,24 @@ namespace PolygonFilling
         private Brush _lightColor = Brushes.White;
         private readonly Brush _defaultSelectedPolygonColor = Brushes.Green;
 
+        //boole
+        private bool _isColorInsteadOfTexture = true;
+
         //wektory
         private Vector _lightVersor = new Vector(0,0,1);
         private Vector _normalVector = new Vector(0,0,1);
         private Vector _disturbVector = new Vector(0,0,0);
 
         //bitmapy
-        private Bitmap _defaultFillTexture;
+        private string _defaultFillTextureFileName = "zlota_tekstura.jpg";
+        private BitmapImage _fillPolygonTextureBitmapImage;
+        private Bitmap _fillPolygonTexture;
 
         public MainWindow()
         {
             InitializeComponent();
             InitializeVerticleContextMenu();
+            InitializeDefaultTexture();
         }
 
         private void InitializeVerticleContextMenu()
@@ -63,6 +71,46 @@ namespace PolygonFilling
             endDrawingPolygonMenuItem.Click += EndPolygon;
 
             _verticleContextMenu.Items.Add(endDrawingPolygonMenuItem);
+        }
+
+        private void InitializeDefaultTexture()
+        {
+            BitmapImage bmp = ConvertFileToBitmapImage(_defaultFillTextureFileName, false);
+            FillPolygonTextureImage.Source = bmp;
+            FillPolygonTextureImage.Height = 50;
+            FillPolygonTextureImage.Width = 50;
+
+            _fillPolygonTextureBitmapImage = bmp;           
+        }
+
+        public Bitmap ConvertImageToBitmap(BitmapImage bitmapImage, int height, int width)
+        {
+            using (var outStream = new MemoryStream())
+            {
+                BitmapEncoder enc = new BmpBitmapEncoder();
+                enc.Frames.Add(BitmapFrame.Create(bitmapImage));
+                enc.Save(outStream);
+                Bitmap bitmap = new Bitmap(outStream);
+
+                return new Bitmap(bitmap, width, height);
+            }
+        }
+
+        public BitmapImage ConvertFileToBitmapImage(string fileNameOrPath, bool isFullPath)
+        {
+            BitmapImage bmp = new BitmapImage();
+            try
+            {
+                bmp.BeginInit();
+                bmp.UriSource = isFullPath ? new Uri(fileNameOrPath) : new Uri(Path.Combine(Directory.GetCurrentDirectory(), "Resources", fileNameOrPath));
+                bmp.EndInit();
+            }
+            catch (Exception e)
+            {
+                MessageBox.Show(e.ToString());
+            }
+
+            return bmp;
         }
 
         private Point GetMousePosition(object mouse)
@@ -115,10 +163,10 @@ namespace PolygonFilling
 
         private void DisableSettingVerticles()
         {
-            canvas.MouseLeftButtonDown -= SetVerticle;
+            Canvas.MouseLeftButtonDown -= SetVerticle;
             foreach (var vertex in _currentPolygon.Vertexes)
             {
-                canvas.Children.Remove(vertex.Pixel);
+                Canvas.Children.Remove(vertex.Pixel);
                 vertex.Pixel = new Rectangle();
             }
         }
@@ -139,7 +187,7 @@ namespace PolygonFilling
         private Rectangle SetPixel(int x, int y, Brush color, int size = 10)
         {
             Rectangle rectangle = new Rectangle() { Width = size, Height = size, Fill = color };
-            canvas.Children.Add(rectangle);
+            Canvas.Children.Add(rectangle);
             Canvas.SetLeft(rectangle, x);
             Canvas.SetTop(rectangle, y);
             return rectangle;
@@ -152,14 +200,14 @@ namespace PolygonFilling
 
             foreach (var vertex in vertexesToDelete)
             {
-                canvas.Children.Remove(vertex.Pixel);
+                Canvas.Children.Remove(vertex.Pixel);
                 _currentPolygon.Vertexes.Remove(vertex);
             }
             foreach (var edge in edgesToDelete)
             {
                 foreach (var linePixel in edge.Line)
                 {
-                    canvas.Children.Remove(linePixel.Rectangle);
+                    Canvas.Children.Remove(linePixel.Rectangle);
                 }
                 _currentPolygon.Edges.Remove(edge);
             }
@@ -167,14 +215,14 @@ namespace PolygonFilling
 
         private void ClearCanvas(object sender, RoutedEventArgs e)
         {
-            canvas.Children.Clear();
+            Canvas.Children.Clear();
             _polygons.Clear();
         }
 
         private void StartDrawingPolygon(object sender, RoutedEventArgs e)
         {
             _currentPolygon = new Polygon();
-            canvas.MouseLeftButtonDown += SetVerticle;
+            Canvas.MouseLeftButtonDown += SetVerticle;
         }
 
         private void EndDrawingPolygon(object sender, RoutedEventArgs e)
@@ -187,7 +235,7 @@ namespace PolygonFilling
                 {
                     foreach (var linePixel in edge.Line)
                     {
-                        canvas.Children.Remove(linePixel.Rectangle);
+                        Canvas.Children.Remove(linePixel.Rectangle);
                     }                   
                 }
                 _currentPolygon = new Polygon();
@@ -218,7 +266,14 @@ namespace PolygonFilling
             if(_selectedPolygon == null) return;
 
             Polygon polygon = _selectedPolygon;
-            List<EdgeTableElem> activeEdgeTable = new List<EdgeTableElem>();
+
+            if (!_isColorInsteadOfTexture)
+            {
+                _fillPolygonTexture = ConvertImageToBitmap(_fillPolygonTextureBitmapImage, (int)Canvas.ActualHeight, (int)Canvas.ActualWidth);
+            }
+            Brush color = LambertFormula();            
+
+            List <EdgeTableElem> activeEdgeTable = new List<EdgeTableElem>();
 
             for (int y = polygon.YMin; y < polygon.YMax + 1; y+= 4)
             {
@@ -226,43 +281,48 @@ namespace PolygonFilling
                 {
                     activeEdgeTable = polygon.EdgeTable[y].OrderBy(el => el.X).ToList();
                 }
-                polygon.PixelFill.Add(FillScanLineWithColor(activeEdgeTable, y));
+                polygon.PixelFill.Add(FillScanLineWithColor(activeEdgeTable, y,color));
             }
 
         }
 
-        private List<Rectangle> FillScanLineWithColor(List<EdgeTableElem> activeEdgeTable, int y)
+        private List<Rectangle> FillScanLineWithColor(List<EdgeTableElem> activeEdgeTable, int y, Brush color)
         {
             var retValue = new List<Rectangle>();
-            if (activeEdgeTable.Count % 2 == 0)
+
+            for (int i = 0; i < activeEdgeTable.Count - 1; i += 2)
             {
-                for (int i = 0; i < activeEdgeTable.Count - 1; i += 2)
-                {
-                    retValue.AddRange(ColorPartOfScanLine(activeEdgeTable[i].Table[y], activeEdgeTable[i + 1].Table[y], y));
-                }
+                retValue.AddRange(ColorPartOfScanLine(activeEdgeTable[i].Table[y], activeEdgeTable[i + 1].Table[y], y, color));
             }
-            else
-            {
-                for (int i = 0; i < activeEdgeTable.Count - 1; i += 2)
-                {
-                    retValue.AddRange(ColorPartOfScanLine(activeEdgeTable[i].Table[y], activeEdgeTable[i + 1].Table[y], y));
-                }
-                retValue.AddRange(ColorPartOfScanLine(activeEdgeTable[activeEdgeTable.Count - 1].Table[y], activeEdgeTable[activeEdgeTable.Count - 1].Table[y], y));
-            }
+
             return retValue;
         }
 
-        private List<Rectangle> ColorPartOfScanLine(int xLeft, int xRight, int y)
+        private List<Rectangle> ColorPartOfScanLine(int xLeft, int xRight, int y,Brush color)
         {
             var retValue = new List<Rectangle>();
-            double x = xLeft;
-            Brush color = LambertFormula();
+            int x = xLeft;
+
             while (x <= xRight)
             {
-                retValue.Add(SetPixel((int)x, y, color, 5));
+                if (_isColorInsteadOfTexture)
+                {
+                    retValue.Add(SetPixel(x, y, color, 5));
+                }
+                else
+                {
+                    retValue.Add(SetPixel(x, y, GetTexturePixel(x,y) , 5));
+                }
+                
                 x+= 4;
             }
             return retValue;
+        }
+
+        private Brush GetTexturePixel(int x, int y)
+        {
+            System.Drawing.Color color = _fillPolygonTexture.GetPixel(x, y);
+            return new SolidColorBrush(Color.FromArgb(color.A, color.R, color.G, color.B));
         }
 
         private List<LinePixel> CreateEdgeLine(Vertex v1, Vertex v2, int size = 4)
@@ -727,7 +787,7 @@ namespace PolygonFilling
             {
                 foreach (var linePixel in edge.Line)
                 {
-                    canvas.Children.Remove(linePixel.Rectangle);
+                    Canvas.Children.Remove(linePixel.Rectangle);
                 }
             }
         }
@@ -773,6 +833,22 @@ namespace PolygonFilling
             {
                 _lightColor = new SolidColorBrush((Color)LightColorPicker.SelectedColor);
             }
+        }
+
+        public void LoadFillPolygonTexture(object sender, RoutedEventArgs e)
+        {
+            
+
+        }
+
+        private void ChooseColorFillPolygon(object sender, RoutedEventArgs e)
+        {
+            _isColorInsteadOfTexture = true;
+        }
+
+        private void ChooseTextureFillPolygon(object sender, RoutedEventArgs e)
+        {
+            _isColorInsteadOfTexture = false;
         }
     }
 }

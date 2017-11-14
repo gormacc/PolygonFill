@@ -19,6 +19,10 @@ namespace PolygonFilling.Structures
 
         public int YMax { get; set; } = 0;
 
+        public int XMax { get; set; } = 0;
+
+        public int XMin { get; set; } = 0;
+
         private int vertexIndexer = 0;
 
         public Polygon()
@@ -78,20 +82,24 @@ namespace PolygonFilling.Structures
         {
             int maxY = int.MinValue;
             int minY = int.MaxValue;
+            int maxX = int.MinValue;
+            int minX = int.MaxValue;
 
             foreach (var edge in Edges)
             {
-                if (edge.GreaterY > maxY)
-                {
-                    maxY = edge.GreaterY;
-                }
-                if (edge.LowerY < minY)
-                {
-                    minY = edge.LowerY;
-                }
+                if (edge.GreaterY > maxY) maxY = edge.GreaterY;
+
+                if (edge.LowerY < minY) minY = edge.LowerY;
+
+                if (edge.GreaterX > maxX) maxX = edge.GreaterX;
+
+                if (edge.LowerX < minX) minX = edge.LowerX;
             }
             YMin = minY;
             YMax = maxY;
+            XMax = maxX;
+            XMin = minX;
+
             EdgeTable = new List<EdgeTableElem>[maxY + 1];
             for (int i = 0; i < maxY + 1; i++)
             {
