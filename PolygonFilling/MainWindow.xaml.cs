@@ -8,6 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Microsoft.Win32;
 using PolygonFilling.Structures;
 using Brush = System.Windows.Media.Brush;
 using Brushes = System.Windows.Media.Brushes;
@@ -837,7 +838,24 @@ namespace PolygonFilling
 
         public void LoadFillPolygonTexture(object sender, RoutedEventArgs e)
         {
-            
+            var openFileDialog = new OpenFileDialog
+                {
+                    Filter = "JPG (*.jpg)|*.jpg|PNG (*.png)|*.png|BMP (*.bmp)|*.bmp",
+                    InitialDirectory = Directory.GetCurrentDirectory()
+                };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                string path = openFileDialog.FileName;
+
+                BitmapImage bmp = ConvertFileToBitmapImage(path, true);
+                FillPolygonTextureImage.Source = bmp;
+                FillPolygonTextureImage.Height = 50;
+                FillPolygonTextureImage.Width = 50;
+
+                _fillPolygonTextureBitmapImage = bmp;
+            }
+                
 
         }
 
