@@ -108,27 +108,12 @@ namespace PolygonFilling.Structures
                 {
                     table[linePixel.Y] = linePixel.X;
                 }
-                EdgeTableElem entry = new EdgeTableElem(edge.GreaterY, Nacyhylenie(edge) == 0 ? edge.LowerX : edge.GreaterX , table);
+                EdgeTableElem entry = new EdgeTableElem(edge.GreaterY, edge.LowerX , table);
                 for (int i = edge.LowerY; i < edge.GreaterY; i++)
                 {
                     EdgeTable[i].Add(entry);
                 }
             }
-        }
-
-        private int Nacyhylenie(Edge edge)
-        {
-            if (edge.VertexOne.X == edge.VertexTwo.X)
-            {
-                return 0;
-            }
-
-            if((edge.VertexOne.X > edge.VertexTwo.X && edge.VertexOne.Y > edge.VertexTwo.Y ) || (edge.VertexOne.X < edge.VertexTwo.X && edge.VertexOne.Y < edge.VertexTwo.Y))
-            {
-                return 1;
-            }
-
-            return -1;
         }
 
     }

@@ -77,6 +77,7 @@
     <Compile Include="Structures\EdgeTableElem.cs" />
     <Compile Include="Structures\LinePixel.cs" />
     <Compile Include="Structures\Polygon.cs" />
+    <Compile Include="Structures\Vector.cs" />
     <Compile Include="Structures\Vertex.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>

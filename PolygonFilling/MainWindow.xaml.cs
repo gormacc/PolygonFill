@@ -1,13 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Shapes;
 using PolygonFilling.Structures;
+using Brush = System.Windows.Media.Brush;
+using Brushes = System.Windows.Media.Brushes;
+using Color = System.Windows.Media.Color;
+using Point = System.Windows.Point;
 using Polygon = PolygonFilling.Structures.Polygon;
+using Rectangle = System.Windows.Shapes.Rectangle;
+using Vector = PolygonFilling.Structures.Vector;
 
 namespace PolygonFilling
 {
@@ -34,7 +40,16 @@ namespace PolygonFilling
         private readonly Brush _defaultPolygonColor = Brushes.Black;
         private readonly ContextMenu _verticleContextMenu = new ContextMenu();
         private Brush _fillColor = Brushes.Red;
+        private Brush _lightColor = Brushes.White;
         private readonly Brush _defaultSelectedPolygonColor = Brushes.Green;
+
+        //wektory
+        private Vector _lightVersor = new Vector(0,0,1);
+        private Vector _normalVector = new Vector(0,0,1);
+        private Vector _disturbVector = new Vector(0,0,0);
+
+        //bitmapy
+        private Bitmap _defaultFillTexture;
 
         public MainWindow()
         {
@@ -200,49 +215,52 @@ namespace PolygonFilling
 
         private void ColorPolygonClick(object sender, RoutedEventArgs e)
         {
+            if(_selectedPolygon == null) return;
+
             Polygon polygon = _selectedPolygon;
             List<EdgeTableElem> activeEdgeTable = new List<EdgeTableElem>();
 
-            for (int y = polygon.YMin; y < polygon.YMax + 1; y++)
+            for (int y = polygon.YMin; y < polygon.YMax + 1; y+= 4)
             {
                 if (polygon.EdgeTable[y].Count != 0)
                 {
                     activeEdgeTable = polygon.EdgeTable[y].OrderBy(el => el.X).ToList();
                 }
-                polygon.PixelFill.Add(FillScanLineWithColor(activeEdgeTable, y, _fillColor));
+                polygon.PixelFill.Add(FillScanLineWithColor(activeEdgeTable, y));
             }
 
         }
 
-        private List<Rectangle> FillScanLineWithColor(List<EdgeTableElem> activeEdgeTable, int y, Brush color)
+        private List<Rectangle> FillScanLineWithColor(List<EdgeTableElem> activeEdgeTable, int y)
         {
             var retValue = new List<Rectangle>();
             if (activeEdgeTable.Count % 2 == 0)
             {
                 for (int i = 0; i < activeEdgeTable.Count - 1; i += 2)
                 {
-                    retValue.AddRange(ColorPartOfScanLine(activeEdgeTable[i].Table[y], activeEdgeTable[i + 1].Table[y], y, color));
+                    retValue.AddRange(ColorPartOfScanLine(activeEdgeTable[i].Table[y], activeEdgeTable[i + 1].Table[y], y));
                 }
             }
             else
             {
                 for (int i = 0; i < activeEdgeTable.Count - 1; i += 2)
                 {
-                    retValue.AddRange(ColorPartOfScanLine(activeEdgeTable[i].X, activeEdgeTable[i + 1].X, y, color));
+                    retValue.AddRange(ColorPartOfScanLine(activeEdgeTable[i].Table[y], activeEdgeTable[i + 1].Table[y], y));
                 }
-                retValue.AddRange(ColorPartOfScanLine(activeEdgeTable[activeEdgeTable.Count - 1].Table[y], activeEdgeTable[activeEdgeTable.Count - 1].Table[y], y, color));
+                retValue.AddRange(ColorPartOfScanLine(activeEdgeTable[activeEdgeTable.Count - 1].Table[y], activeEdgeTable[activeEdgeTable.Count - 1].Table[y], y));
             }
             return retValue;
         }
 
-        private List<Rectangle> ColorPartOfScanLine(int xLeft, int xRight, int y, Brush color)
+        private List<Rectangle> ColorPartOfScanLine(int xLeft, int xRight, int y)
         {
             var retValue = new List<Rectangle>();
             double x = xLeft;
+            Brush color = LambertFormula();
             while (x <= xRight)
             {
-                retValue.Add(SetPixel((int)x, y, color, 3));
-                x++;
+                retValue.Add(SetPixel((int)x, y, color, 5));
+                x+= 4;
             }
             return retValue;
         }
@@ -338,7 +356,7 @@ namespace PolygonFilling
             return listOfRectangles;
         }
 
-        private void PickedColorChanged(object sender, RoutedPropertyChangedEventArgs<Color?> e)
+        private void PolygonFillColorChanged(object sender, RoutedPropertyChangedEventArgs<Color?> e)
         {
             if (PolygonFillColorPicker.SelectedColor != null)
             {
@@ -385,6 +403,8 @@ namespace PolygonFilling
             }
         }
 
+        #region Clipping
+
         private Point GetIntersectionCoordinates(Edge e1, Edge e2)
         {
             int x1 = e1.VertexOne.X;
@@ -395,7 +415,7 @@ namespace PolygonFilling
 
             int x3 = e2.VertexOne.X;
             int y3 = e2.VertexOne.Y;
-        
+
             int x4 = e2.VertexTwo.X;
             int y4 = e2.VertexTwo.Y;
 
@@ -434,7 +454,7 @@ namespace PolygonFilling
             Vertex v1 = vertexesList[index];
             Vertex v2 = vertexesList[nextIndex];
 
-            if (Det(v1,v2) < 0)
+            if (Det(v1, v2) < 0)
             {
                 vertexesList.Reverse();
             }
@@ -463,7 +483,7 @@ namespace PolygonFilling
             return (u > 0 && u < 1) && (t > 0 && t < 1);
         }
 
-        private void GenerateListsWithIntersectionPoints(Polygon polygonOne, Polygon polygonTwo , out List<Vertex> vertexesOne, out List<Vertex> vertexesTwo)
+        private void GenerateListsWithIntersectionPoints(Polygon polygonOne, Polygon polygonTwo, out List<Vertex> vertexesOne, out List<Vertex> vertexesTwo)
         {
             vertexesOne = new List<Vertex>(polygonOne.Vertexes);
             vertexesTwo = new List<Vertex>(polygonTwo.Vertexes);
@@ -495,7 +515,7 @@ namespace PolygonFilling
 
         private void StartClippingPolygons(object sender, RoutedEventArgs e)
         {
-            if(_polygons.Count < 2) return;
+            if (_polygons.Count < 2) return;
 
             ColorPolygonEdges(_selectedPolygon, _defaultPolygonColor);
             ClippingPolygonsStackPanel.Visibility = Visibility.Visible;
@@ -518,7 +538,7 @@ namespace PolygonFilling
             {
                 _selectedPolygon = _polygons[0];
                 ColorPolygonEdges(_selectedPolygon, _defaultSelectedPolygonColor);
-            }           
+            }
         }
 
         private void SelectPreviousClippingPolygonOne(object sender, RoutedEventArgs e)
@@ -529,7 +549,7 @@ namespace PolygonFilling
             {
                 ColorPolygonEdges(_selectedClippingPolygonOne, _defaultPolygonColor);
                 _selectedClippingPolygonOneIndex -= 1;
-                if(_selectedClippingPolygonTwoIndex == _selectedClippingPolygonOneIndex) return;
+                if (_selectedClippingPolygonTwoIndex == _selectedClippingPolygonOneIndex) return;
                 _selectedClippingPolygonOne = _polygons[_selectedClippingPolygonOneIndex];
                 ColorPolygonEdges(_selectedClippingPolygonOne, _defaultSelectedClippingPolygonOneColor);
             }
@@ -577,7 +597,7 @@ namespace PolygonFilling
 
         private void ClipPolygons(object sender, RoutedEventArgs e)
         {
-            if(_selectedClippingPolygonOne == null || _selectedClippingPolygonTwo == null) return;
+            if (_selectedClippingPolygonOne == null || _selectedClippingPolygonTwo == null) return;
 
             List<Vertex> clipPolygonOneVertexes = new List<Vertex>();
             List<Vertex> clipPolygonTwoVertexes = new List<Vertex>();
@@ -621,7 +641,7 @@ namespace PolygonFilling
 
             foreach (var coordinates in pointsCoordinates)
             {
-                newPolygon.AddNewVertex(coordinates,new Rectangle());
+                newPolygon.AddNewVertex(coordinates, new Rectangle());
             }
             for (int i = 0; i < newPolygon.Vertexes.Count - 1; i++)
             {
@@ -699,6 +719,8 @@ namespace PolygonFilling
             return false;
         }
 
+        #endregion
+
         private void ErasePolygonFromCanvas(Polygon polygon)
         {
             foreach (var edge in polygon.Edges)
@@ -707,6 +729,49 @@ namespace PolygonFilling
                 {
                     canvas.Children.Remove(linePixel.Rectangle);
                 }
+            }
+        }
+
+        private Brush GetCurrentPixelColor(int x, int y)
+        {
+
+
+
+            return new SolidColorBrush();
+        }
+
+        private Brush LambertFormula()
+        {
+            int rgbCount = 255;
+
+            Vector objectColorVector = new Vector(_fillColor);
+            Vector lightColorVector = new Vector(_lightColor);
+
+            Vector normalAddedWithDisurbVector = _normalVector.AddVectors(_disturbVector);
+            Vector normalDisurbVector = normalAddedWithDisurbVector.Normalize();
+
+            double cos = normalDisurbVector.DotProduct(_lightVersor);
+
+            int r = (int)((lightColorVector.X * objectColorVector.X * cos) * rgbCount);
+            int g = (int)((lightColorVector.Y * objectColorVector.Y * cos) * rgbCount);
+            int b = (int)((lightColorVector.Z * objectColorVector.Z * cos) * rgbCount);
+
+            Color color = new Color
+            {
+                R = (byte)r,
+                G = (byte)g,
+                B = (byte)b,
+                A = 255
+            };
+
+            return new SolidColorBrush(color);
+        }
+
+        private void LightColorChanged(object sender, RoutedPropertyChangedEventArgs<Color?> e)
+        {
+            if (LightColorPicker.SelectedColor != null)
+            {
+                _lightColor = new SolidColorBrush((Color)LightColorPicker.SelectedColor);
             }
         }
     }
