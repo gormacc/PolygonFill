@@ -376,7 +376,31 @@ namespace PolygonFilling
 
         private void SetNewDisturbVector(int x, int y)
         {
-            // uzupełnij 
+            System.Drawing.Color height = _heightMapTexture.GetPixel(
+                Math.Min(Math.Max(x - _selectedPolygon.XMin, 1), _heightMapTexture.Width - 1),
+                Math.Min(Math.Max(y - _selectedPolygon.YMin, 1), _heightMapTexture.Height - 1));
+
+            Vector heightVector = new Vector(height);
+
+            Vector t = new Vector(1, 0, -heightVector.X);
+            Vector b = new Vector(0, 1, -heightVector.Y);
+
+            System.Drawing.Color heightAddX = _heightMapTexture.GetPixel(
+                Math.Min(Math.Max(x + 1 - _selectedPolygon.XMin, 1), _heightMapTexture.Width - 1),
+                Math.Min(Math.Max(y - _selectedPolygon.YMin, 1), _heightMapTexture.Height - 1));
+
+            System.Drawing.Color heightAddY = _heightMapTexture.GetPixel(
+                Math.Min(Math.Max(x - _selectedPolygon.XMin, 1), _heightMapTexture.Width - 1),
+                Math.Min(Math.Max(y + 1 - _selectedPolygon.YMin, 1), _heightMapTexture.Height - 1));
+
+            double dhx = heightAddX.B - height.B;
+            double dhy = heightAddY.B - height.B;
+
+            Vector tMulDhx = t.MultiplyByNumber(dhx);
+            Vector bMulDhy = b.MultiplyByNumber(dhy);
+
+            _disturbVector = tMulDhx.AddVectors(bMulDhy);
+            _disturbVector = _disturbVector.Normalize();
         }
 
         private Brush GetTexturePixel(int x, int y)

@@ -62,6 +62,11 @@ namespace PolygonFilling.Structures
             return new Vector(this.X + vec.X, this.Y + vec.Y , this.Z + vec.Z);
         }
 
+        public Vector MultiplyByNumber(double number)
+        {
+            return new Vector(this.X * number, this.Y * number, this.Z * number);
+        }
+
         public Brush GetColorFromVector()
         {
             if (X > 1 || Y > 1 || Z > 1) return Brushes.White;
