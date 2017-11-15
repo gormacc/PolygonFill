@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -82,8 +83,8 @@ namespace PolygonFilling
             List<Point> clippPolygonPoints = new List<Point>();
             clippPolygonPoints.Add(new Point(300, 300));
             clippPolygonPoints.Add(new Point(500, 300));
-            clippPolygonPoints.Add(new Point(500, 500));
-            clippPolygonPoints.Add(new Point(400, 500));
+            clippPolygonPoints.Add(new Point(700, 500));
+            clippPolygonPoints.Add(new Point(600, 600));
             clippPolygonPoints.Add(new Point(350, 700));
             clippPolygonPoints.Add(new Point(300, 500));
 
@@ -477,26 +478,82 @@ namespace PolygonFilling
             vertexesOne = new List<Vertex>(polygonOne.Vertexes);
             vertexesTwo = new List<Vertex>(polygonTwo.Vertexes);
 
-            foreach (var edgeOne in polygonOne.Edges)
+            List<Edge> edgesOne = new List<Edge>(polygonOne.Edges);
+            List<Edge> edgesTwo = new List<Edge>(polygonTwo.Edges);
+
+            bool breakForeachLoop = false;
+
+            while (true)
             {
-                foreach (var edgeTwo in polygonTwo.Edges)
+                foreach (var edgeOne in edgesOne)
                 {
-                    if (CheckIfCanIntersect(edgeOne, edgeTwo))
+                    foreach (var edgeTwo in edgesTwo)
                     {
-                        Point coordinates = GetIntersectionCoordinates(edgeOne, edgeTwo);
+                        if (CheckIfCanIntersect(edgeOne, edgeTwo) && !(edgeOne.WasIntersected && edgeTwo.WasIntersected))
+                        {
+                            Point coordinates = GetIntersectionCoordinates(edgeOne, edgeTwo);
 
-                        Vertex vOne = new Vertex(vertexesOne.Count, coordinates, new Rectangle());
-                        vOne.IsIntersected = true;
-                        int indexOne = vertexesOne.IndexOf(edgeOne.VertexTwo);
-                        vertexesOne.Insert(indexOne, vOne);
+                            Vertex vOne = new Vertex(vertexesOne.Count, coordinates, new Rectangle());
+                            vOne.IsIntersected = true;
+                            int indexOne = vertexesOne.IndexOf(edgeOne.VertexTwo);
+                            vertexesOne.Insert(indexOne, vOne);
 
-                        Vertex vTwo = new Vertex(vertexesTwo.Count, coordinates, new Rectangle());
-                        vTwo.IsIntersected = true;
-                        int indexTwo = vertexesTwo.IndexOf(edgeTwo.VertexTwo);
-                        vertexesTwo.Insert(indexTwo, vTwo);
+                            Vertex vTwo = new Vertex(vertexesTwo.Count, coordinates, new Rectangle());
+                            vTwo.IsIntersected = true;
+                            int indexTwo = vertexesTwo.IndexOf(edgeTwo.VertexTwo);
+                            vertexesTwo.Insert(indexTwo, vTwo);
+
+                            breakForeachLoop = true;
+                            break;
+                        }
                     }
+                    if (breakForeachLoop) break;
+                }
+
+                edgesOne.Clear();
+                edgesTwo.Clear();
+
+                Edge newEdgeToAdd = new Edge();
+
+                for (int i = 0; i < vertexesOne.Count - 1; i++)
+                {
+                    Vertex vertexOne = vertexesOne[i];
+                    Vertex vertexTwo = vertexesOne[i + 1];
+                    newEdgeToAdd = new Edge(vertexOne, vertexTwo, new List<LinePixel>());
+                    if (vertexOne.IsIntersected || vertexTwo.IsIntersected) newEdgeToAdd.WasIntersected = true;
+                    edgesOne.Add(newEdgeToAdd);
+                }
+                Vertex vertexLast = vertexesOne[vertexesOne.Count - 1];
+                Vertex vertexFirst = vertexesOne[0];
+                newEdgeToAdd = new Edge(vertexLast, vertexFirst, new List<LinePixel>());
+                if (vertexLast.IsIntersected || vertexFirst.IsIntersected) newEdgeToAdd.WasIntersected = true;
+                edgesOne.Add(newEdgeToAdd);
+
+                for (int i = 0; i < vertexesTwo.Count - 1; i++)
+                {
+                    Vertex vertexOne = vertexesTwo[i];
+                    Vertex vertexTwo = vertexesTwo[i + 1];
+                    newEdgeToAdd = new Edge(vertexOne, vertexTwo, new List<LinePixel>());
+                    if (vertexOne.IsIntersected || vertexTwo.IsIntersected) newEdgeToAdd.WasIntersected = true;
+                    edgesTwo.Add(newEdgeToAdd);
+                }
+                vertexLast = vertexesTwo[vertexesTwo.Count - 1];
+                vertexFirst = vertexesTwo[0];
+                newEdgeToAdd = new Edge(vertexLast, vertexFirst, new List<LinePixel>());
+                if (vertexLast.IsIntersected || vertexFirst.IsIntersected) newEdgeToAdd.WasIntersected = true;
+                edgesTwo.Add(newEdgeToAdd);
+
+                if (breakForeachLoop)
+                {
+                    breakForeachLoop = false;
+                }
+                else
+                {
+                    break;
                 }
             }
+
+            
            
         }      
 
@@ -511,16 +568,15 @@ namespace PolygonFilling
 
             if (clipPolygonOneVertexes.Count != _fillPolygon.Vertexes.Count)
             {
+                Vertex startVertex = FindStartVertex(_fillPolygon.Vertexes, _clippPolygon.Edges);
+                if(startVertex == null) return;
+
                 ErasePolygonFromCanvas(_fillPolygon);
                 ErasePolygonFromCanvas(_clippPolygon);
 
-                Vertex startVertex;
-                while (CheckIfIsaAnyUnvisitedIntersectionPoint(clipPolygonOneVertexes, out startVertex))
-                {
-                    List<Point> newPolygonPointsCoordinates = CreateClippedPolygon(clipPolygonOneVertexes, clipPolygonTwoVertexes, startVertex);
-                    _fillPolygon = CreateAndDrawNewPolygon(newPolygonPointsCoordinates);
-                    RedrawVertexes();
-                }
+                List<Point> newPolygonPointsCoordinates = CreateClippedPolygon(clipPolygonOneVertexes, clipPolygonTwoVertexes, startVertex);
+                _fillPolygon = CreateAndDrawNewPolygon(newPolygonPointsCoordinates);
+                ColorPolygon();
             }
         }
 
@@ -573,24 +629,29 @@ namespace PolygonFilling
             return retValueList;
         }
 
-        private bool CheckIfIsaAnyUnvisitedIntersectionPoint(List<Vertex> vertexes, out Vertex notVisitedVertex)
+        private Vertex FindStartVertex(List<Vertex> vertexes,List<Edge> edgesTwo)
         {
-            notVisitedVertex = new Vertex();
-            bool retValue = false;
-            int minIndex = int.MaxValue;
+            int counter = 0;
+
             foreach (var vertex in vertexes)
             {
-                if (vertex.IsIntersected && !vertex.IsVisited)
+                counter = 0;
+                foreach (var edge in edgesTwo)
                 {
-                    if (minIndex > vertex.Id)
-                    {
-                        notVisitedVertex = vertex;
-                        retValue = true;
-                    }
-                   
+                    Point p0 = new Point(edge.VertexOne.X, edge.VertexTwo.Y);
+                    Point p1 = new Point(edge.VertexTwo.X, edge.VertexTwo.Y);
+                    Point p2 = new Point(vertex.X, vertex.Y);
+
+                    double a = ((p2.X - p0.X) * (p1.Y - p0.Y)) - ((p2.Y - p0.Y) * (p1.X - p0.X));
+
+                    if ( a < 0 ) counter++;
                 }
+                if (counter == edgesTwo.Count) return vertex;
             }
-            return retValue;
+
+            
+
+            return null;
         }
 
         #endregion
