@@ -71,6 +71,8 @@
 
 
             <Button Name="ClipPolygonsButton" Click="ClipPolygons" Content="Wytnij" Margin="10,20" />
+
+            <ToggleButton Name="MovePolygonButton" Checked="AllowMovingPolygon" Unchecked="ForbidMovingPolygon" Content="Poruszaj wielokat" Margin="10,20" />
         </StackPanel>
     </Grid>
 </Window>

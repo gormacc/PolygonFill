@@ -65,7 +65,7 @@ namespace PolygonFilling
             InitializeComponent();
             InitializeTwoPolygons();
             InitializeDefaultTexture();
-            EnableMovingVerticles();
+            EnableMovingVertexes();
         }
 
         private void InitializeTwoPolygons()
@@ -79,8 +79,6 @@ namespace PolygonFilling
 
             _fillPolygon = CreateAndDrawNewPolygon(fillPolygonPoints);
             ColorPolygon();
-
-            RedrawVertexes();
 
             List<Point> clippPolygonPoints = new List<Point>();
             clippPolygonPoints.Add(new Point(300, 300));
@@ -118,7 +116,7 @@ namespace PolygonFilling
 
         private void RedrawVertexes()
         {
-            DisableMovingVerticles();
+            DisableMovingVertexes();
 
             foreach (var vertex in _fillPolygon.Vertexes)
             {
@@ -127,7 +125,7 @@ namespace PolygonFilling
                 vertex.SetNewPixel(vertex.X, vertex.Y, SetPixel(vertex.X, vertex.Y, _defaultPolygonColor));
             }
 
-            EnableMovingVerticles();
+            EnableMovingVertexes();
         }
 
         private void InitializeDefaultTexture()
@@ -224,6 +222,7 @@ namespace PolygonFilling
                 }
                 polygon.PixelFill.Add(FillScanLineWithColor(activeEdgeTable));
             }
+            RedrawVertexes();
         }
 
         private void InitializeTexturesBeforeColoring()
@@ -601,6 +600,10 @@ namespace PolygonFilling
 
         private void ErasePolygonFromCanvas(Polygon polygon)
         {
+            foreach (var vertex in polygon.Vertexes)
+            {
+                Canvas.Children.Remove(vertex.Pixel);
+            }
             foreach (var edge in polygon.Edges)
             {
                 foreach (var linePixel in edge.Line)
@@ -754,47 +757,40 @@ namespace PolygonFilling
 
         #region Moving
 
-        //private void EnableMovingPolygon()
-        //{
-        //    canvas.MouseLeftButtonDown += LeftButtonDownPolygon;
-        //    canvas.MouseLeftButtonUp += LeftButtonUpPolygon;
-        //}
+        private void EnableMovingPolygon()
+        {
+            Canvas.MouseLeftButtonDown += LeftButtonDownPolygon;
+            Canvas.MouseLeftButtonUp += LeftButtonUpPolygon;
+        }
 
-        //private void DisableMovingPolygon()
-        //{
-        //    canvas.MouseLeftButtonDown -= LeftButtonDownPolygon;
-        //    canvas.MouseLeftButtonUp -= LeftButtonUpPolygon;
-        //}
+        private void DisableMovingPolygon()
+        {
+            Canvas.MouseLeftButtonDown -= LeftButtonDownPolygon;
+            Canvas.MouseLeftButtonUp -= LeftButtonUpPolygon;
+        }
 
         private Vertex _movingVertex;
 
-        private void EnableMovingVerticles()
+        private void EnableMovingVertexes()
         {
             foreach (var ver in _fillPolygon.Vertexes)
             {
-                ver.Pixel.MouseLeftButtonDown += LeftButtonDownVerticle;
+                ver.Pixel.MouseLeftButtonDown += LeftButtonDownVertex;
             }
-            Canvas.MouseLeftButtonUp += LeftButtonUpVerticle;
+            Canvas.MouseLeftButtonUp += LeftButtonUpVertex;
         }
 
-        private void DisableMovingVerticles()
+        private void DisableMovingVertexes()
         {
             foreach (var ver in _fillPolygon.Vertexes)
             {
-                ver.Pixel.MouseLeftButtonDown -= LeftButtonDownVerticle;
+                ver.Pixel.MouseLeftButtonDown -= LeftButtonDownVertex;
             }
-            Canvas.MouseLeftButtonUp -= LeftButtonUpVerticle;
+            Canvas.MouseLeftButtonUp -= LeftButtonUpVertex;
         }
 
-        private void LeftButtonDownVerticle(object sender, MouseButtonEventArgs e)
+        private void LeftButtonDownVertex(object sender, MouseButtonEventArgs e)
         {
-            //if (_isMovingVertexSet)
-            //{
-            //    _movingVertex = null;
-            //    _isMovingVertexSet = false;
-            //    return;
-            //}
-
             Rectangle rectangle = sender as Rectangle;
             if (rectangle != null)
             {
@@ -802,7 +798,7 @@ namespace PolygonFilling
             }
         }
 
-        private void LeftButtonUpVerticle(object sender, MouseButtonEventArgs e)
+        private void LeftButtonUpVertex(object sender, MouseButtonEventArgs e)
         {
             //ustalenie pozycji myszki
             Point coords = GetMousePosition(sender);
@@ -833,8 +829,8 @@ namespace PolygonFilling
             // nowy punkt wierzchołka
             Rectangle pixel = SetPixel(x, y, _defaultPolygonColor);
 
-            pixel.MouseLeftButtonDown += LeftButtonDownVerticle;
-            pixel.MouseLeftButtonUp += LeftButtonUpVerticle;
+            pixel.MouseLeftButtonDown += LeftButtonDownVertex;
+            pixel.MouseLeftButtonUp += LeftButtonUpVertex;
             _movingVertex.SetNewPixel(x, y, pixel);
 
             // --------------------
@@ -869,8 +865,6 @@ namespace PolygonFilling
             _fillPolygon.InitializeEdgeTable();
             ColorPolygon();
 
-            RedrawVertexes();
-
             //-----------------------
         }
 
@@ -887,86 +881,74 @@ namespace PolygonFilling
             return _fillPolygon.Vertexes.FirstOrDefault(v => Equals(v.Pixel, rectangle));
         }
 
-        //private void AllowMovingPolygon(object sender, RoutedEventArgs e)
-        //{
-        //    DisableMovingVerticles();
-        //    EnableMovingPolygon();
+        private void AllowMovingPolygon(object sender, RoutedEventArgs e)
+        {
+            DisableMovingVertexes();
+            EnableMovingPolygon();
 
-        //    foreach (var verticle in _verticles)
-        //    {
-        //        verticle.Rectangle.MouseLeftButtonUp += LeftButtonUpPolygon;
-        //    }
-        //    foreach (var line in _lines)
-        //    {
-        //        foreach (var rectangle in line.Rectangles)
-        //        {
-        //            rectangle.MouseLeftButtonUp += LeftButtonUpPolygon;
-        //        }
-        //    }
-        //}
+            foreach (var vertex in _fillPolygon.Vertexes)
+            {
+                vertex.Pixel.MouseLeftButtonUp += LeftButtonUpPolygon;
+            }
+        }
 
-        //private void ForbidMovingPolygon(object sender, RoutedEventArgs e)
-        //{
-        //    EnableMovingVerticles();
-        //    DisableMovingPolygon();
+        private void ForbidMovingPolygon(object sender, RoutedEventArgs e)
+        {
+            EnableMovingVertexes();
+            DisableMovingPolygon();
 
-        //    foreach (var verticle in _verticles)
-        //    {
-        //        verticle.Rectangle.MouseLeftButtonUp -= LeftButtonUpPolygon;
-        //    }
-        //    foreach (var line in _lines)
-        //    {
-        //        foreach (var rectangle in line.Rectangles)
-        //        {
-        //            rectangle.MouseLeftButtonUp -= LeftButtonUpPolygon;
-        //        }
-        //    }
-        //}
+            foreach (var vertex in _fillPolygon.Vertexes)
+            {
+                vertex.Pixel.MouseLeftButtonUp -= LeftButtonUpPolygon;
+            }
+        }
+    
 
-        //private void LeftButtonDownPolygon(object sender, MouseButtonEventArgs e)
-        //{
-        //    int x, y;
-        //    GetMousePosition(sender, out x, out y);
-        //    _movePolygonXPosition = x;
-        //    _movePolygonYPosition = y;
+        private Point _previousMousePosition = new Point();
 
-        //    canvas.MouseMove += MovePolygon;
-        //}
+        private void LeftButtonDownPolygon(object sender, MouseButtonEventArgs e)
+        {
+            _previousMousePosition = GetMousePosition(sender);
+        }
 
-        //private void LeftButtonUpPolygon(object sender, MouseButtonEventArgs e)
-        //{
-        //    canvas.MouseMove -= MovePolygon;
-        //}
+        private void LeftButtonUpPolygon(object sender, MouseButtonEventArgs e)
+        {
+            Point _currentMousePosition = GetMousePosition(sender);
 
-        //private void MovePolygon(object sender, MouseEventArgs e)
-        //{
-        //    if (_verticles.Count == 0) return;
+            int dx = (int)(_previousMousePosition.X - _currentMousePosition.X);
+            int dy = (int)(_previousMousePosition.Y - _currentMousePosition.Y);
 
-        //    int x, y;
-        //    GetMousePosition(sender, out x, out y);
+            MovePolygon(dx, dy);
 
-        //    canvas.Children.Clear();
+        }
 
-        //    int dx = _movePolygonXPosition - x;
-        //    int dy = _movePolygonYPosition - y;
+        private void MovePolygon(int dx, int dy)
+        {            
+            ErasePolygonFromCanvas(_fillPolygon);
+            _fillPolygon.Edges.Clear();
 
-        //    _movePolygonXPosition = x;
-        //    _movePolygonYPosition = y;
+            foreach (var vertex in _fillPolygon.Vertexes)
+            {
+                vertex.X -= dx;
+                vertex.Y -= dy;
+                vertex.SetNewPixel(vertex.X, vertex.Y, SetPixel(vertex.X, vertex.Y, _defaultPolygonColor));
+            }
 
-        //    foreach (var verticle in _verticles)
-        //    {
-        //        verticle.X -= dx;
-        //        verticle.Y -= dy;
-        //        verticle.Rectangle = SetPixel(verticle.X, verticle.Y, VerticleSize, true);
-        //    }
+            for (int i = 0; i < _fillPolygon.Vertexes.Count - 1; i++)
+            {
+                Vertex vertexOne = _fillPolygon.GetVertexByIndex(i);
+                Vertex vertexTwo = _fillPolygon.GetVertexByIndex(i + 1);
+                _fillPolygon.AddNewEdge(vertexOne, vertexTwo, CreateEdgeLine(vertexOne, vertexTwo));
+            }
+            Vertex vertexLast = _fillPolygon.GetVertexByIndex(_fillPolygon.Vertexes.Count - 1);
+            Vertex vertexFirst = _fillPolygon.GetVertexByIndex(0);
+            _fillPolygon.AddNewEdge(vertexLast, vertexFirst, CreateEdgeLine(vertexLast, vertexFirst));
 
-        //    foreach (var line in _lines)
-        //    {
-        //        RedrawLine(line);
-        //        line.EnableClicking();
-        //    }
-
-        //}
+            _fillPolygon.EdgeTable = new List<EdgeTableElem>[0];
+            _fillPolygon.InitializeEdgeTable();
+            ColorPolygon();
+            
+        }
 
 
         #endregion
