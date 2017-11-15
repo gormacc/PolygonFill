@@ -41,9 +41,10 @@ namespace PolygonFilling
         private bool _isColorInsteadOfTexturePolygonFill = true;
         private bool _isDefaultInsteadOfTextureNormalVector = true;
         private bool _isDefaultInsteadOfTextureHeightMap = true;
+        private bool _isDefaultInsteadOfFixedLightVector = true;
 
         //wektory
-        private Vector _lightVersor = new Vector(0,0,1);
+        private Vector _lightVector = new Vector(0,0,1);
         private Vector _normalVector = new Vector(0,0,1);
         private Vector _disturbVector = new Vector(0,0,0);
 
@@ -241,6 +242,15 @@ namespace PolygonFilling
             {
                 _heightMapTexture = ConvertImageToBitmap(_heightMapBitmapImage,
                     _fillPolygon.YMax - _fillPolygon.YMin, _fillPolygon.XMax - _fillPolygon.XMin);
+            }
+
+            if(!_isDefaultInsteadOfFixedLightVector)
+            {
+                _lightVector = new Vector(LightVectorXSlider.Value, LightVectorYSlider.Value, LightVectorZSlider.Value).Normalize();
+            }
+            else
+            {
+                _lightVector = new Vector(0,0,1);
             }
         }
 
@@ -648,9 +658,6 @@ namespace PolygonFilling
                 }
                 if (counter == edgesTwo.Count) return vertex;
             }
-
-            
-
             return null;
         }
 
@@ -688,7 +695,7 @@ namespace PolygonFilling
             Vector normalAddedWithDisurbVector = _normalVector.AddVectors(_disturbVector);
             Vector normalDisurbVector = normalAddedWithDisurbVector.Normalize();
 
-            double cos = normalDisurbVector.DotProduct(_lightVersor);
+            double cos = normalDisurbVector.DotProduct(_lightVector);
 
             int r = (int)((lightColorVector.X * objectColorVector.X * cos) * rgbCount);
             int g = (int)((lightColorVector.Y * objectColorVector.Y * cos) * rgbCount);
@@ -809,6 +816,16 @@ namespace PolygonFilling
         private void ChooseTextureHeightMap(object sender, RoutedEventArgs e)
         {
             _isDefaultInsteadOfTextureHeightMap = false;
+        }
+
+        private void ChooseDefaultLightVector(object sender, RoutedEventArgs e)
+        {
+            _isDefaultInsteadOfFixedLightVector = true;
+        }
+
+        private void ChooseFixedLightVector(object sender, RoutedEventArgs e)
+        {
+            _isDefaultInsteadOfFixedLightVector = false;
         }
 
         #endregion
@@ -1010,6 +1027,6 @@ namespace PolygonFilling
 
 
         #endregion
-
+        
     }
 }
