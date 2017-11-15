@@ -116,7 +116,7 @@ namespace PolygonFilling.Structures
                 {
                     table[linePixel.Y] = linePixel.X;
                 }
-                EdgeTableElem entry = new EdgeTableElem(edge.GreaterY, edge.LowerX , table);
+                EdgeTableElem entry = new EdgeTableElem(edge.GreaterY, (edge.LowerX + edge.GreaterX) / 2 , table);
                 for (int i = edge.LowerY; i < edge.GreaterY; i++)
                 {
                     EdgeTable[i].Add(entry);

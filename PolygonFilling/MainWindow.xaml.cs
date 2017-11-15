@@ -29,7 +29,6 @@ namespace PolygonFilling
     /// </summary>
     public partial class MainWindow
     {
-        private readonly List<Polygon> _polygons = new List<Polygon>();
         private Polygon _fillPolygon = new Polygon();
         private Polygon _clippPolygon = new Polygon();
 
@@ -207,20 +206,19 @@ namespace PolygonFilling
         {
             if (_fillPolygon.Vertexes.Count < 3) return;
 
-            Polygon polygon = _fillPolygon;
-
             InitializeTexturesBeforeColoring();
+            _fillPolygon.PixelFill.Clear();
 
             List<EdgeTableElem> activeEdgeTable = new List<EdgeTableElem>();
 
-            for (int y = polygon.YMin; y < polygon.YMax + 1; y += 4)
+            for (int y = _fillPolygon.YMin; y < _fillPolygon.YMax + 1; y += 4)
             {
                 _currentY = y;
-                if (polygon.EdgeTable[y].Count != 0)
+                if (_fillPolygon.EdgeTable[y].Count != 0)
                 {
-                    activeEdgeTable = polygon.EdgeTable[y].OrderBy(el => el.X).ToList();
+                    activeEdgeTable = _fillPolygon.EdgeTable[y].OrderBy(el => el.X).ToList();
                 }
-                polygon.PixelFill.Add(FillScanLineWithColor(activeEdgeTable));
+                _fillPolygon.PixelFill.Add(FillScanLineWithColor(activeEdgeTable));
             }
             RedrawVertexes();
         }
@@ -513,19 +511,12 @@ namespace PolygonFilling
 
             if (clipPolygonOneVertexes.Count != _fillPolygon.Vertexes.Count)
             {
-                _polygons.Remove(_fillPolygon);
                 ErasePolygonFromCanvas(_fillPolygon);
-                _polygons.Remove(_clippPolygon);
                 ErasePolygonFromCanvas(_clippPolygon);
 
                 Vertex startVertex;
                 while (CheckIfIsaAnyUnvisitedIntersectionPoint(clipPolygonOneVertexes, out startVertex))
                 {
-                    foreach (var vertex in _fillPolygon.Vertexes)
-                    {
-                        Canvas.Children.Remove(vertex.Pixel);
-                    }
-
                     List<Point> newPolygonPointsCoordinates = CreateClippedPolygon(clipPolygonOneVertexes, clipPolygonTwoVertexes, startVertex);
                     _fillPolygon = CreateAndDrawNewPolygon(newPolygonPointsCoordinates);
                     RedrawVertexes();
@@ -585,15 +576,21 @@ namespace PolygonFilling
         private bool CheckIfIsaAnyUnvisitedIntersectionPoint(List<Vertex> vertexes, out Vertex notVisitedVertex)
         {
             notVisitedVertex = new Vertex();
+            bool retValue = false;
+            int minIndex = int.MaxValue;
             foreach (var vertex in vertexes)
             {
                 if (vertex.IsIntersected && !vertex.IsVisited)
                 {
-                    notVisitedVertex = vertex;
-                    return true;
+                    if (minIndex > vertex.Id)
+                    {
+                        notVisitedVertex = vertex;
+                        retValue = true;
+                    }
+                   
                 }
             }
-            return false;
+            return retValue;
         }
 
         #endregion
