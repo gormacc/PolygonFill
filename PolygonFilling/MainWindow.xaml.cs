@@ -402,7 +402,6 @@ namespace PolygonFilling
             _disturbVector = tMulDhx.AddVectors(bMulDhy);
             _disturbVector = _disturbVector.Normalize();
         }
-        //Drugi test
 
         private Brush GetTexturePixel(int x, int y)
         {
