@@ -527,38 +527,7 @@ namespace PolygonFilling
                     if (breakForeachLoop) break;
                 }
 
-                edgesOne.Clear();
-                edgesTwo.Clear();
-
-                Edge newEdgeToAdd = new Edge();
-
-                for (int i = 0; i < vertexesOne.Count - 1; i++)
-                {
-                    Vertex vertexOne = vertexesOne[i];
-                    Vertex vertexTwo = vertexesOne[i + 1];
-                    newEdgeToAdd = new Edge(vertexOne, vertexTwo, new List<LinePixel>());
-                    if (vertexOne.IsIntersected || vertexTwo.IsIntersected) newEdgeToAdd.WasIntersected = true;
-                    edgesOne.Add(newEdgeToAdd);
-                }
-                Vertex vertexLast = vertexesOne[vertexesOne.Count - 1];
-                Vertex vertexFirst = vertexesOne[0];
-                newEdgeToAdd = new Edge(vertexLast, vertexFirst, new List<LinePixel>());
-                if (vertexLast.IsIntersected || vertexFirst.IsIntersected) newEdgeToAdd.WasIntersected = true;
-                edgesOne.Add(newEdgeToAdd);
-
-                for (int i = 0; i < vertexesTwo.Count - 1; i++)
-                {
-                    Vertex vertexOne = vertexesTwo[i];
-                    Vertex vertexTwo = vertexesTwo[i + 1];
-                    newEdgeToAdd = new Edge(vertexOne, vertexTwo, new List<LinePixel>());
-                    if (vertexOne.IsIntersected || vertexTwo.IsIntersected) newEdgeToAdd.WasIntersected = true;
-                    edgesTwo.Add(newEdgeToAdd);
-                }
-                vertexLast = vertexesTwo[vertexesTwo.Count - 1];
-                vertexFirst = vertexesTwo[0];
-                newEdgeToAdd = new Edge(vertexLast, vertexFirst, new List<LinePixel>());
-                if (vertexLast.IsIntersected || vertexFirst.IsIntersected) newEdgeToAdd.WasIntersected = true;
-                edgesTwo.Add(newEdgeToAdd);
+                ReorganizeEdgesAndVertexes(vertexesOne, vertexesTwo, edgesOne, edgesTwo);  // nie jestem pewien czy zmieni te wartości
 
                 if (breakForeachLoop)
                 {
@@ -568,10 +537,43 @@ namespace PolygonFilling
                 {
                     break;
                 }
-            }
+            }            
+        }
 
-            
-           
+        private void ReorganizeEdgesAndVertexes(List<Vertex> vertexesOne, List<Vertex> vertexesTwo, List<Edge> edgesOne, List<Edge> edgesTwo)
+        {
+            edgesOne.Clear();
+            edgesTwo.Clear();
+
+            Edge newEdgeToAdd = new Edge();
+
+            for (int i = 0; i < vertexesOne.Count - 1; i++)
+            {
+                Vertex vertexOne = vertexesOne[i];
+                Vertex vertexTwo = vertexesOne[i + 1];
+                newEdgeToAdd = new Edge(vertexOne, vertexTwo, new List<LinePixel>());
+                if (vertexOne.IsIntersected || vertexTwo.IsIntersected) newEdgeToAdd.WasIntersected = true;
+                edgesOne.Add(newEdgeToAdd);
+            }
+            Vertex vertexLast = vertexesOne[vertexesOne.Count - 1];
+            Vertex vertexFirst = vertexesOne[0];
+            newEdgeToAdd = new Edge(vertexLast, vertexFirst, new List<LinePixel>());
+            if (vertexLast.IsIntersected || vertexFirst.IsIntersected) newEdgeToAdd.WasIntersected = true;
+            edgesOne.Add(newEdgeToAdd);
+
+            for (int i = 0; i < vertexesTwo.Count - 1; i++)
+            {
+                Vertex vertexOne = vertexesTwo[i];
+                Vertex vertexTwo = vertexesTwo[i + 1];
+                newEdgeToAdd = new Edge(vertexOne, vertexTwo, new List<LinePixel>());
+                if (vertexOne.IsIntersected || vertexTwo.IsIntersected) newEdgeToAdd.WasIntersected = true;
+                edgesTwo.Add(newEdgeToAdd);
+            }
+            vertexLast = vertexesTwo[vertexesTwo.Count - 1];
+            vertexFirst = vertexesTwo[0];
+            newEdgeToAdd = new Edge(vertexLast, vertexFirst, new List<LinePixel>());
+            if (vertexLast.IsIntersected || vertexFirst.IsIntersected) newEdgeToAdd.WasIntersected = true;
+            edgesTwo.Add(newEdgeToAdd);
         }
 
         private Vertex CheckIfCanBeStartVertex(Vertex vertexOne, Vertex vertexTwo, Edge edge, out bool isStartVertexSet)
