@@ -483,14 +483,15 @@ namespace PolygonFilling
             return (u > 0 && u < 1) && (t > 0 && t < 1);
         }
 
-        private void GenerateListsWithIntersectionPoints(Polygon polygonOne, Polygon polygonTwo, out List<Vertex> vertexesOne, out List<Vertex> vertexesTwo)
+        private void GenerateListsWithIntersectionPoints(Polygon polygonOne, Polygon polygonTwo, out List<Vertex> vertexesOne, out List<Vertex> vertexesTwo, out Vertex startVertex)
         {
             vertexesOne = new List<Vertex>(polygonOne.Vertexes);
             vertexesTwo = new List<Vertex>(polygonTwo.Vertexes);
 
             List<Edge> edgesOne = new List<Edge>(polygonOne.Edges);
             List<Edge> edgesTwo = new List<Edge>(polygonTwo.Edges);
-
+            startVertex = null;
+            bool isStartVertexSet = false;
             bool breakForeachLoop = false;
 
             while (true)
@@ -501,6 +502,12 @@ namespace PolygonFilling
                     {
                         if (CheckIfCanIntersect(edgeOne, edgeTwo) && !(edgeOne.WasIntersected && edgeTwo.WasIntersected))
                         {
+                            if (!isStartVertexSet)
+                            {
+                                startVertex = CheckIfCanBeStartVertex(edgeOne.VertexOne, edgeOne.VertexTwo, edgeTwo,
+                                    out isStartVertexSet);
+                            }
+
                             Point coordinates = GetIntersectionCoordinates(edgeOne, edgeTwo);
 
                             Vertex vOne = new Vertex(vertexesOne.Count, coordinates, new Rectangle());
@@ -565,7 +572,28 @@ namespace PolygonFilling
 
             
            
-        }      
+        }
+
+        private Vertex CheckIfCanBeStartVertex(Vertex vertexOne, Vertex vertexTwo, Edge edge, out bool isStartVertexSet)
+        {
+
+            Point p0 = new Point(edge.VertexOne.X, edge.VertexOne.Y);
+            Point p1 = new Point(edge.VertexTwo.X, edge.VertexTwo.Y);
+            Point p2 = new Point(vertexOne.X, vertexOne.Y);
+            Point p3 = new Point(vertexTwo.X, vertexTwo.Y);
+
+            double a = ((p2.X - p0.X) * (p1.Y - p0.Y)) - ((p2.Y - p0.Y) * (p1.X - p0.X));
+            double b = ((p3.X - p0.X) * (p1.Y - p0.Y)) - ((p3.Y - p0.Y) * (p1.X - p0.X));
+
+            if (a > 0 && b < 0)
+            {
+                isStartVertexSet = true;
+                return vertexTwo;
+            }
+
+            isStartVertexSet = false;
+            return null;
+        }
 
         private void ClipPolygons(object sender, RoutedEventArgs e)
         {
@@ -573,12 +601,12 @@ namespace PolygonFilling
 
             List<Vertex> clipPolygonOneVertexes = new List<Vertex>();
             List<Vertex> clipPolygonTwoVertexes = new List<Vertex>();
+            Vertex startVertex = null;
 
-            GenerateListsWithIntersectionPoints(_fillPolygon, _clippPolygon, out clipPolygonOneVertexes, out clipPolygonTwoVertexes);
+            GenerateListsWithIntersectionPoints(_fillPolygon, _clippPolygon, out clipPolygonOneVertexes, out clipPolygonTwoVertexes, out startVertex);
 
             if (clipPolygonOneVertexes.Count != _fillPolygon.Vertexes.Count)
             {
-                Vertex startVertex = FindStartVertex(_fillPolygon.Vertexes, _clippPolygon.Edges);
                 if(startVertex == null) return;
 
                 ErasePolygonFromCanvas(_fillPolygon);
@@ -639,27 +667,7 @@ namespace PolygonFilling
             return retValueList;
         }
 
-        private Vertex FindStartVertex(List<Vertex> vertexes,List<Edge> edgesTwo)
-        {
-            int counter = 0;
 
-            foreach (var vertex in vertexes)
-            {
-                counter = 0;
-                foreach (var edge in edgesTwo)
-                {
-                    Point p0 = new Point(edge.VertexOne.X, edge.VertexTwo.Y);
-                    Point p1 = new Point(edge.VertexTwo.X, edge.VertexTwo.Y);
-                    Point p2 = new Point(vertex.X, vertex.Y);
-
-                    double a = ((p2.X - p0.X) * (p1.Y - p0.Y)) - ((p2.Y - p0.Y) * (p1.X - p0.X));
-
-                    if ( a < 0 ) counter++;
-                }
-                if (counter == edgesTwo.Count) return vertex;
-            }
-            return null;
-        }
 
         #endregion
 
