@@ -35,5 +35,12 @@ namespace PolygonFilling.Structures
             Pixel = pixel;
         }
 
+        public void SetNewPixel(int x, int y, Rectangle pixel)
+        {
+            X = x;
+            Y = y;
+            Pixel = pixel;
+        }
+
     }
 }

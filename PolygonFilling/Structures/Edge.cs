@@ -13,6 +13,8 @@ namespace PolygonFilling.Structures
 
         public List<LinePixel> Line { get; set; } = new List<LinePixel>();
 
+        public bool WasIntersected { get; set; } = false;
+
         public Edge()
         {
 

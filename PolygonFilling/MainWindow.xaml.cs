@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -13,6 +14,7 @@ using PolygonFilling.Structures;
 using Brush = System.Windows.Media.Brush;
 using Brushes = System.Windows.Media.Brushes;
 using Color = System.Windows.Media.Color;
+using Path = System.IO.Path;
 using Point = System.Windows.Point;
 using Polygon = PolygonFilling.Structures.Polygon;
 using Rectangle = System.Windows.Shapes.Rectangle;
@@ -28,31 +30,21 @@ namespace PolygonFilling
     /// </summary>
     public partial class MainWindow
     {
-        private readonly List<Polygon> _polygons = new List<Polygon>();
-        private Polygon _currentPolygon = new Polygon();
-        private Polygon _selectedPolygon = new Polygon();
-        private int _selectedPolygonIndex;
-
-        private Polygon _selectedClippingPolygonOne = new Polygon();
-        private int _selectedClippingPolygonOneIndex;
-        private Polygon _selectedClippingPolygonTwo = new Polygon();
-        private int _selectedClippingPolygonTwoIndex;
-        private readonly Brush _defaultSelectedClippingPolygonOneColor = Brushes.Green;
-        private readonly Brush _defaultSelectedClippingPolygonTwoColor = Brushes.Red;
+        private Polygon _fillPolygon = new Polygon();
+        private Polygon _clippPolygon = new Polygon();
 
         private readonly Brush _defaultPolygonColor = Brushes.Black;
-        private readonly ContextMenu _verticleContextMenu = new ContextMenu();
         private Brush _fillColor = Brushes.Red;
         private Brush _lightColor = Brushes.White;
-        private readonly Brush _defaultSelectedPolygonColor = Brushes.Green;
 
         //boole
         private bool _isColorInsteadOfTexturePolygonFill = true;
         private bool _isDefaultInsteadOfTextureNormalVector = true;
         private bool _isDefaultInsteadOfTextureHeightMap = true;
+        private bool _isDefaultInsteadOfFixedLightVector = true;
 
         //wektory
-        private Vector _lightVersor = new Vector(0,0,1);
+        private Vector _lightVector = new Vector(0,0,1);
         private Vector _normalVector = new Vector(0,0,1);
         private Vector _disturbVector = new Vector(0,0,0);
 
@@ -72,16 +64,69 @@ namespace PolygonFilling
         public MainWindow()
         {
             InitializeComponent();
-            InitializeVerticleContextMenu();
+            InitializeTwoPolygons();
             InitializeDefaultTexture();
+            EnableMovingVertexes();
         }
 
-        private void InitializeVerticleContextMenu()
+        private void InitializeTwoPolygons()
         {
-            MenuItem endDrawingPolygonMenuItem = new MenuItem { Header = "Zakoncz rysowanie wielokata" };
-            endDrawingPolygonMenuItem.Click += EndPolygon;
+            List<Point> fillPolygonPoints = new List<Point>();
+            fillPolygonPoints.Add(new Point(50,150));
+            fillPolygonPoints.Add(new Point(100, 100));
+            fillPolygonPoints.Add(new Point(200, 100));
+            fillPolygonPoints.Add(new Point(250, 150));
+            fillPolygonPoints.Add(new Point(150, 200));
 
-            _verticleContextMenu.Items.Add(endDrawingPolygonMenuItem);
+            _fillPolygon = CreateAndDrawNewPolygon(fillPolygonPoints);
+            ColorPolygon();
+
+            List<Point> clippPolygonPoints = new List<Point>();
+            clippPolygonPoints.Add(new Point(300, 300));
+            clippPolygonPoints.Add(new Point(500, 300));
+            clippPolygonPoints.Add(new Point(700, 500));
+            clippPolygonPoints.Add(new Point(600, 600));
+            clippPolygonPoints.Add(new Point(350, 700));
+            clippPolygonPoints.Add(new Point(300, 500));
+
+            _clippPolygon = CreateAndDrawNewPolygon(clippPolygonPoints);
+
+        }
+
+        private Polygon CreateAndDrawNewPolygon(List<Point> pointsCoordinates)
+        {
+            Polygon newPolygon = new Polygon();
+
+            foreach (var coordinates in pointsCoordinates)
+            {
+                newPolygon.AddNewVertex(coordinates, new Rectangle());
+            }
+            for (int i = 0; i < newPolygon.Vertexes.Count - 1; i++)
+            {
+                Vertex vertexOne = newPolygon.GetVertexByIndex(i);
+                Vertex vertexTwo = newPolygon.GetVertexByIndex(i + 1);
+                newPolygon.AddNewEdge(vertexOne, vertexTwo, CreateEdgeLine(vertexOne, vertexTwo));
+            }
+            Vertex vertexLast = newPolygon.GetVertexByIndex(newPolygon.Vertexes.Count - 1);
+            Vertex vertexFirst = newPolygon.GetVertexByIndex(0);
+            newPolygon.AddNewEdge(vertexLast, vertexFirst, CreateEdgeLine(vertexLast, vertexFirst));
+            newPolygon.InitializeEdgeTable();
+
+            return newPolygon;
+        }
+
+        private void RedrawVertexes()
+        {
+            DisableMovingVertexes();
+
+            foreach (var vertex in _fillPolygon.Vertexes)
+            {
+                Canvas.Children.Remove(vertex.Pixel);
+                vertex.Pixel = new Rectangle();
+                vertex.SetNewPixel(vertex.X, vertex.Y, SetPixel(vertex.X, vertex.Y, _defaultPolygonColor));
+            }
+
+            EnableMovingVertexes();
         }
 
         private void InitializeDefaultTexture()
@@ -143,69 +188,6 @@ namespace PolygonFilling
             return new Point(x,y);
         }
 
-        private void SetVerticle(object sender, MouseButtonEventArgs e)
-        {
-            Point coordinates = GetMousePosition(sender);
-
-            Rectangle pixel = SetPixel((int)coordinates.X, (int)coordinates.Y, _defaultPolygonColor);
-            pixel.ContextMenu = _verticleContextMenu;
-            _currentPolygon.AddNewVertex(coordinates, pixel);
-
-            if (_currentPolygon.Vertexes.Count >= 2)
-            {
-                int index = _currentPolygon.Vertexes.Count - 2;
-                Vertex vertexOne = _currentPolygon.GetVertexByIndex(index);
-                Vertex vertexTwo = _currentPolygon.GetVertexByIndex(index + 1);
-                _currentPolygon.AddNewEdge(vertexOne,vertexTwo, 
-                    CreateEdgeLine(vertexOne, vertexTwo));
-            }
-        }
-
-        private void EndPolygon(object sender, RoutedEventArgs e)
-        {
-            if (_currentPolygon.Vertexes.Count < 3)
-                return;
-
-            Rectangle pix;
-            if (CheckMenuItem(sender, out pix))
-            {
-                Vertex endVerticle = _currentPolygon.GetVertexByPixel(pix);
-                Vertex lastVerticle = _currentPolygon.GetLastVertex();
-
-                if(Math.Abs(endVerticle.Id - lastVerticle.Id) <= 1)
-                    return;
-
-                _currentPolygon.AddNewEdge(lastVerticle, endVerticle,
-                    CreateEdgeLine(lastVerticle, endVerticle));
-
-                DeleteTail(endVerticle.Id);
-                DrawPolygonToggleButton.IsChecked = false;               
-            }
-        }
-
-        private void DisableSettingVerticles()
-        {
-            Canvas.MouseLeftButtonDown -= SetVerticle;
-            foreach (var vertex in _currentPolygon.Vertexes)
-            {
-                Canvas.Children.Remove(vertex.Pixel);
-                vertex.Pixel = new Rectangle();
-            }
-        }
-
-        private bool CheckMenuItem(object menuItemToCheck, out Rectangle rc)
-        {
-            MenuItem mi = menuItemToCheck as MenuItem;
-            if (mi != null)
-            {
-                rc = ((ContextMenu)mi.Parent).PlacementTarget as Rectangle;
-                return true;
-            }
-
-            rc = new Rectangle();
-            return false;
-        }
-
         private Rectangle SetPixel(int x, int y, Brush color, int size = 10)
         {
             Rectangle rectangle = new Rectangle() { Width = size, Height = size, Fill = color };
@@ -213,98 +195,34 @@ namespace PolygonFilling
             Canvas.SetLeft(rectangle, x);
             Canvas.SetTop(rectangle, y);
             return rectangle;
-        }
-
-        private void DeleteTail(int endVerticleId)
-        {
-            List<Vertex> vertexesToDelete = new List<Vertex>(_currentPolygon.Vertexes.Where(v => v.Id < endVerticleId));
-            List<Edge> edgesToDelete = new List<Edge>(_currentPolygon.Edges.Where(e => e.VertexOne.Id < endVerticleId || e.VertexTwo.Id < endVerticleId));
-
-            foreach (var vertex in vertexesToDelete)
-            {
-                Canvas.Children.Remove(vertex.Pixel);
-                _currentPolygon.Vertexes.Remove(vertex);
-            }
-            foreach (var edge in edgesToDelete)
-            {
-                foreach (var linePixel in edge.Line)
-                {
-                    Canvas.Children.Remove(linePixel.Rectangle);
-                }
-                _currentPolygon.Edges.Remove(edge);
-            }
-        }
-
-        private void ClearCanvas(object sender, RoutedEventArgs e)
-        {
-            Canvas.Children.Clear();
-            _polygons.Clear();
-        }
-
-        private void StartDrawingPolygon(object sender, RoutedEventArgs e)
-        {
-            _currentPolygon = new Polygon();
-            Canvas.MouseLeftButtonDown += SetVerticle;
-        }
-
-        private void EndDrawingPolygon(object sender, RoutedEventArgs e)
-        {
-            DisableSettingVerticles();
-
-            if (_currentPolygon.Vertexes.Count <= 2)
-            {
-                foreach (var edge in _currentPolygon.Edges)
-                {
-                    foreach (var linePixel in edge.Line)
-                    {
-                        Canvas.Children.Remove(linePixel.Rectangle);
-                    }                   
-                }
-                _currentPolygon = new Polygon();
-                return;
-            }
-
-            if (_currentPolygon.Vertexes.Count != _currentPolygon.Edges.Count)
-            {
-                Vertex firstVertex = _currentPolygon.GetFirstVertex();
-                Vertex lastVertex = _currentPolygon.GetLastVertex();
-
-                _currentPolygon.AddNewEdge(lastVertex, firstVertex,
-                    CreateEdgeLine(lastVertex, firstVertex));
-            }
-
-            _currentPolygon.InitializeEdgeTable();
-            _polygons.Add(_currentPolygon);
-            _currentPolygon = new Polygon();
-
-            ColorPolygonEdges(_selectedPolygon, _defaultPolygonColor);
-            _selectedPolygonIndex = _polygons.Count - 1;
-            _selectedPolygon = _polygons[_selectedPolygonIndex];
-            ColorPolygonEdges(_selectedPolygon, _defaultSelectedPolygonColor);
-        }
+        }      
 
         private int _currentY = 0;
 
         private void ColorPolygonClick(object sender, RoutedEventArgs e)
         {
-            if(_selectedPolygon == null) return;
+            ColorPolygon();
+        }
 
-            Polygon polygon = _selectedPolygon;
+        private void ColorPolygon()
+        {
+            if (_fillPolygon.Vertexes.Count < 3) return;
 
-            InitializeTexturesBeforeColoring();          
+            InitializeTexturesBeforeColoring();
+            _fillPolygon.PixelFill.Clear();
 
-            List <EdgeTableElem> activeEdgeTable = new List<EdgeTableElem>();
+            List<EdgeTableElem> activeEdgeTable = new List<EdgeTableElem>();
 
-            for (int y = polygon.YMin; y < polygon.YMax + 1; y+= 4)
+            for (int y = _fillPolygon.YMin; y < _fillPolygon.YMax + 1; y += 4)
             {
                 _currentY = y;
-                if (polygon.EdgeTable[y].Count != 0)
+                if (_fillPolygon.EdgeTable[y].Count != 0)
                 {
-                    activeEdgeTable = polygon.EdgeTable[y].OrderBy(el => el.X).ToList();
+                    activeEdgeTable = _fillPolygon.EdgeTable[y].OrderBy(el => el.X).ToList();
                 }
-                polygon.PixelFill.Add(FillScanLineWithColor(activeEdgeTable));
+                _fillPolygon.PixelFill.Add(FillScanLineWithColor(activeEdgeTable));
             }
-
+            RedrawVertexes();
         }
 
         private void InitializeTexturesBeforeColoring()
@@ -317,13 +235,22 @@ namespace PolygonFilling
             if (!_isDefaultInsteadOfTextureNormalVector)
             {
                 _normalVectorTexture = ConvertImageToBitmap(_normalVectorBitmapImage,
-                    _selectedPolygon.YMax - _selectedPolygon.YMin, _selectedPolygon.XMax - _selectedPolygon.XMin);
+                    _fillPolygon.YMax - _fillPolygon.YMin, _fillPolygon.XMax - _fillPolygon.XMin);
             }
 
             if (!_isDefaultInsteadOfTextureHeightMap)
             {
                 _heightMapTexture = ConvertImageToBitmap(_heightMapBitmapImage,
-                    _selectedPolygon.YMax - _selectedPolygon.YMin, _selectedPolygon.XMax - _selectedPolygon.XMin);
+                    _fillPolygon.YMax - _fillPolygon.YMin, _fillPolygon.XMax - _fillPolygon.XMin);
+            }
+
+            if(!_isDefaultInsteadOfFixedLightVector)
+            {
+                _lightVector = new Vector(LightVectorXSlider.Value, LightVectorYSlider.Value, LightVectorZSlider.Value).Normalize();
+            }
+            else
+            {
+                _lightVector = new Vector(0,0,1);
             }
         }
 
@@ -369,16 +296,16 @@ namespace PolygonFilling
         private void SetNewNormalVector(int x, int y)
         {
             System.Drawing.Color newColor = _normalVectorTexture.GetPixel(
-                Math.Min(Math.Max(x - _selectedPolygon.XMin, 1), _normalVectorTexture.Width - 1) ,
-                Math.Min(Math.Max(y - _selectedPolygon.YMin, 1), _normalVectorTexture.Height - 1) );
+                Math.Min(Math.Max(x - _fillPolygon.XMin, 1), _normalVectorTexture.Width - 1) ,
+                Math.Min(Math.Max(y - _fillPolygon.YMin, 1), _normalVectorTexture.Height - 1) );
             _normalVector = new Vector(newColor);
         }
 
         private void SetNewDisturbVector(int x, int y)
         {
             System.Drawing.Color height = _heightMapTexture.GetPixel(
-                Math.Min(Math.Max(x - _selectedPolygon.XMin, 1), _heightMapTexture.Width - 1),
-                Math.Min(Math.Max(y - _selectedPolygon.YMin, 1), _heightMapTexture.Height - 1));
+                Math.Min(Math.Max(x - _fillPolygon.XMin, 1), _heightMapTexture.Width - 1),
+                Math.Min(Math.Max(y - _fillPolygon.YMin, 1), _heightMapTexture.Height - 1));
 
             Vector heightVector = new Vector(height);
 
@@ -386,12 +313,12 @@ namespace PolygonFilling
             Vector b = new Vector(0, 1, -heightVector.Y);
 
             System.Drawing.Color heightAddX = _heightMapTexture.GetPixel(
-                Math.Min(Math.Max(x + 1 - _selectedPolygon.XMin, 1), _heightMapTexture.Width - 1),
-                Math.Min(Math.Max(y - _selectedPolygon.YMin, 1), _heightMapTexture.Height - 1));
+                Math.Min(Math.Max(x + 1 - _fillPolygon.XMin, 1), _heightMapTexture.Width - 1),
+                Math.Min(Math.Max(y - _fillPolygon.YMin, 1), _heightMapTexture.Height - 1));
 
             System.Drawing.Color heightAddY = _heightMapTexture.GetPixel(
-                Math.Min(Math.Max(x - _selectedPolygon.XMin, 1), _heightMapTexture.Width - 1),
-                Math.Min(Math.Max(y + 1 - _selectedPolygon.YMin, 1), _heightMapTexture.Height - 1));
+                Math.Min(Math.Max(x - _fillPolygon.XMin, 1), _heightMapTexture.Width - 1),
+                Math.Min(Math.Max(y + 1 - _fillPolygon.YMin, 1), _heightMapTexture.Height - 1));
 
             double dhx = heightAddX.B - height.B;
             double dhy = heightAddY.B - height.B;
@@ -506,46 +433,7 @@ namespace PolygonFilling
             {
                 _fillColor = new SolidColorBrush((Color)PolygonFillColorPicker.SelectedColor);
             }            
-        }
-
-        private void SelectPrevPolygon(object sender, RoutedEventArgs e)
-        {
-            if(_polygons.Count == 0) return;
-
-            if (_selectedPolygonIndex > 0)
-            {
-                ColorPolygonEdges(_selectedPolygon, _defaultPolygonColor);
-                _selectedPolygonIndex -= 1;
-                _selectedPolygon = _polygons[_selectedPolygonIndex];
-                ColorPolygonEdges(_selectedPolygon, _defaultSelectedPolygonColor);
-            }
-        }
-
-        private void SelectNextPolygon(object sender, RoutedEventArgs e)
-        {
-            if (_polygons.Count == 0) return;
-
-            if (_selectedPolygonIndex < _polygons.Count - 1)
-            {
-                ColorPolygonEdges(_selectedPolygon, _defaultPolygonColor);
-                _selectedPolygonIndex += 1;
-                _selectedPolygon = _polygons[_selectedPolygonIndex];
-                ColorPolygonEdges(_selectedPolygon, _defaultSelectedPolygonColor);
-            }
-        }
-
-        private void ColorPolygonEdges(Polygon polygon, Brush color)
-        {
-            if(polygon == null) return;
-
-            foreach (var edge in polygon.Edges)
-            {
-                foreach (var linePixel in edge.Line)
-                {
-                    linePixel.Rectangle.Fill = color;
-                }
-            }
-        }
+        }      
 
         #region Clipping
 
@@ -570,39 +458,7 @@ namespace PolygonFilling
                     (((x1 - x2) * (y3 - y4)) - ((y1 - y2) * (x3 - x4)));
 
             return new Point(x, y);
-        }
-
-        private void SortVertexesClockwise(List<Vertex> vertexesList)
-        {
-            int x = int.MaxValue;
-            int y = int.MaxValue;
-            Vertex v = vertexesList.FirstOrDefault();
-            foreach (var vertex in vertexesList)
-            {
-                if (vertex.X < x || vertex.Y < y)
-                {
-                    v = vertex;
-                    x = vertex.X;
-                    y = vertex.Y;
-                }
-            }
-
-            int index = vertexesList.IndexOf(v);
-            int nextIndex = index + 1;
-
-            if (nextIndex > vertexesList.Count - 1)
-            {
-                nextIndex = 0;
-            }
-
-            Vertex v1 = vertexesList[index];
-            Vertex v2 = vertexesList[nextIndex];
-
-            if (Det(v1, v2) < 0)
-            {
-                vertexesList.Reverse();
-            }
-        }
+        }       
 
         private int Det(Vertex v1, Vertex v2)
         {
@@ -627,177 +483,139 @@ namespace PolygonFilling
             return (u > 0 && u < 1) && (t > 0 && t < 1);
         }
 
-        private void GenerateListsWithIntersectionPoints(Polygon polygonOne, Polygon polygonTwo, out List<Vertex> vertexesOne, out List<Vertex> vertexesTwo)
+        private void GenerateListsWithIntersectionPoints(Polygon polygonOne, Polygon polygonTwo, out List<Vertex> vertexesOne, out List<Vertex> vertexesTwo, out Vertex startVertex)
         {
             vertexesOne = new List<Vertex>(polygonOne.Vertexes);
             vertexesTwo = new List<Vertex>(polygonTwo.Vertexes);
 
-            foreach (var edgeOne in polygonOne.Edges)
+            List<Edge> edgesOne = new List<Edge>(polygonOne.Edges);
+            List<Edge> edgesTwo = new List<Edge>(polygonTwo.Edges);
+            startVertex = null;
+            bool isStartVertexSet = false;
+            bool breakForeachLoop = false;
+
+            while (true)
             {
-                foreach (var edgeTwo in polygonTwo.Edges)
+                foreach (var edgeOne in edgesOne)
                 {
-                    if (CheckIfCanIntersect(edgeOne, edgeTwo))
+                    foreach (var edgeTwo in edgesTwo)
                     {
-                        Point coordinates = GetIntersectionCoordinates(edgeOne, edgeTwo);
+                        if (CheckIfCanIntersect(edgeOne, edgeTwo) && !(edgeOne.WasIntersected && edgeTwo.WasIntersected))
+                        {
+                            if (!isStartVertexSet)
+                            {
+                                startVertex = CheckIfCanBeStartVertex(edgeOne.VertexOne, edgeOne.VertexTwo, edgeTwo,
+                                    out isStartVertexSet);
+                            }
 
-                        Vertex vOne = new Vertex(vertexesOne.Count, coordinates, new Rectangle());
-                        vOne.IsIntersected = true;
-                        int indexOne = vertexesOne.IndexOf(edgeOne.VertexTwo);
-                        vertexesOne.Insert(indexOne, vOne);
+                            Point coordinates = GetIntersectionCoordinates(edgeOne, edgeTwo);
 
-                        Vertex vTwo = new Vertex(vertexesTwo.Count, coordinates, new Rectangle());
-                        vTwo.IsIntersected = true;
-                        int indexTwo = vertexesTwo.IndexOf(edgeTwo.VertexTwo);
-                        vertexesTwo.Insert(indexTwo, vTwo);
+                            Vertex vOne = new Vertex(vertexesOne.Count, coordinates, new Rectangle());
+                            vOne.IsIntersected = true;
+                            int indexOne = vertexesOne.IndexOf(edgeOne.VertexTwo);
+                            vertexesOne.Insert(indexOne, vOne);
+
+                            Vertex vTwo = new Vertex(vertexesTwo.Count, coordinates, new Rectangle());
+                            vTwo.IsIntersected = true;
+                            int indexTwo = vertexesTwo.IndexOf(edgeTwo.VertexTwo);
+                            vertexesTwo.Insert(indexTwo, vTwo);
+
+                            breakForeachLoop = true;
+                            break;
+                        }
                     }
+                    if (breakForeachLoop) break;
+                }
+
+                edgesOne.Clear();
+                edgesTwo.Clear();
+
+                Edge newEdgeToAdd = new Edge();
+
+                for (int i = 0; i < vertexesOne.Count - 1; i++)
+                {
+                    Vertex vertexOne = vertexesOne[i];
+                    Vertex vertexTwo = vertexesOne[i + 1];
+                    newEdgeToAdd = new Edge(vertexOne, vertexTwo, new List<LinePixel>());
+                    if (vertexOne.IsIntersected || vertexTwo.IsIntersected) newEdgeToAdd.WasIntersected = true;
+                    edgesOne.Add(newEdgeToAdd);
+                }
+                Vertex vertexLast = vertexesOne[vertexesOne.Count - 1];
+                Vertex vertexFirst = vertexesOne[0];
+                newEdgeToAdd = new Edge(vertexLast, vertexFirst, new List<LinePixel>());
+                if (vertexLast.IsIntersected || vertexFirst.IsIntersected) newEdgeToAdd.WasIntersected = true;
+                edgesOne.Add(newEdgeToAdd);
+
+                for (int i = 0; i < vertexesTwo.Count - 1; i++)
+                {
+                    Vertex vertexOne = vertexesTwo[i];
+                    Vertex vertexTwo = vertexesTwo[i + 1];
+                    newEdgeToAdd = new Edge(vertexOne, vertexTwo, new List<LinePixel>());
+                    if (vertexOne.IsIntersected || vertexTwo.IsIntersected) newEdgeToAdd.WasIntersected = true;
+                    edgesTwo.Add(newEdgeToAdd);
+                }
+                vertexLast = vertexesTwo[vertexesTwo.Count - 1];
+                vertexFirst = vertexesTwo[0];
+                newEdgeToAdd = new Edge(vertexLast, vertexFirst, new List<LinePixel>());
+                if (vertexLast.IsIntersected || vertexFirst.IsIntersected) newEdgeToAdd.WasIntersected = true;
+                edgesTwo.Add(newEdgeToAdd);
+
+                if (breakForeachLoop)
+                {
+                    breakForeachLoop = false;
+                }
+                else
+                {
+                    break;
                 }
             }
 
-            SortVertexesClockwise(vertexesOne); // naprawić to 
-            SortVertexesClockwise(vertexesTwo);
+            
+           
         }
 
-        private void StartClippingPolygons(object sender, RoutedEventArgs e)
+        private Vertex CheckIfCanBeStartVertex(Vertex vertexOne, Vertex vertexTwo, Edge edge, out bool isStartVertexSet)
         {
-            if (_polygons.Count < 2) return;
 
-            ColorPolygonEdges(_selectedPolygon, _defaultPolygonColor);
-            ClippingPolygonsStackPanel.Visibility = Visibility.Visible;
+            Point p0 = new Point(edge.VertexOne.X, edge.VertexOne.Y);
+            Point p1 = new Point(edge.VertexTwo.X, edge.VertexTwo.Y);
+            Point p2 = new Point(vertexOne.X, vertexOne.Y);
+            Point p3 = new Point(vertexTwo.X, vertexTwo.Y);
 
-            _selectedClippingPolygonOne = _polygons[0];
-            _selectedClippingPolygonOneIndex = 0;
-            ColorPolygonEdges(_selectedClippingPolygonOne, _defaultSelectedClippingPolygonOneColor);
+            double a = ((p2.X - p0.X) * (p1.Y - p0.Y)) - ((p2.Y - p0.Y) * (p1.X - p0.X));
+            double b = ((p3.X - p0.X) * (p1.Y - p0.Y)) - ((p3.Y - p0.Y) * (p1.X - p0.X));
 
-            _selectedClippingPolygonTwo = _polygons[1];
-            _selectedClippingPolygonTwoIndex = 1;
-            ColorPolygonEdges(_selectedClippingPolygonTwo, _defaultSelectedClippingPolygonTwoColor);
-        }
-
-        private void EndClippingPolygons(object sender, RoutedEventArgs e)
-        {
-            ClippingPolygonsStackPanel.Visibility = Visibility.Collapsed;
-            ColorPolygonEdges(_selectedClippingPolygonOne, _defaultPolygonColor);
-            ColorPolygonEdges(_selectedClippingPolygonOne, _defaultPolygonColor);
-            if (_polygons.Count != 0)
+            if (a > 0 && b < 0)
             {
-                _selectedPolygon = _polygons[0];
-                ColorPolygonEdges(_selectedPolygon, _defaultSelectedPolygonColor);
+                isStartVertexSet = true;
+                return vertexTwo;
             }
-        }
 
-        private void SelectPreviousClippingPolygonOne(object sender, RoutedEventArgs e)
-        {
-            if (_polygons.Count < 2) return;
-
-            if (_selectedClippingPolygonOneIndex > 0)
-            {
-                ColorPolygonEdges(_selectedClippingPolygonOne, _defaultPolygonColor);
-                _selectedClippingPolygonOneIndex -= 1;
-                if (_selectedClippingPolygonTwoIndex == _selectedClippingPolygonOneIndex) return;
-                _selectedClippingPolygonOne = _polygons[_selectedClippingPolygonOneIndex];
-                ColorPolygonEdges(_selectedClippingPolygonOne, _defaultSelectedClippingPolygonOneColor);
-            }
-        }
-
-        private void SelectNextClippingPolygonOne(object sender, RoutedEventArgs e)
-        {
-            if (_polygons.Count < 2) return;
-
-            if (_selectedClippingPolygonOneIndex < _polygons.Count - 1)
-            {
-                ColorPolygonEdges(_selectedClippingPolygonOne, _defaultPolygonColor);
-                _selectedClippingPolygonOneIndex += 1;
-                _selectedClippingPolygonOne = _polygons[_selectedClippingPolygonOneIndex];
-                ColorPolygonEdges(_selectedClippingPolygonOne, _defaultSelectedPolygonColor);
-            }
-        }
-
-        private void SelectPreviousClippingPolygonTwo(object sender, RoutedEventArgs e)
-        {
-            if (_polygons.Count < 2) return;
-
-            if (_selectedClippingPolygonTwoIndex > 0)
-            {
-                ColorPolygonEdges(_selectedClippingPolygonTwo, _defaultPolygonColor);
-                _selectedClippingPolygonTwoIndex -= 1;
-                if (_selectedClippingPolygonTwoIndex == _selectedClippingPolygonOneIndex) return;
-                _selectedClippingPolygonTwo = _polygons[_selectedClippingPolygonTwoIndex];
-                ColorPolygonEdges(_selectedClippingPolygonTwo, _defaultSelectedPolygonColor);
-            }
-        }
-
-        private void SelectNextClippingPolygonTwo(object sender, RoutedEventArgs e)
-        {
-            if (_polygons.Count < 2) return;
-
-            if (_selectedClippingPolygonTwoIndex < _polygons.Count - 1)
-            {
-                ColorPolygonEdges(_selectedClippingPolygonTwo, _defaultPolygonColor);
-                _selectedClippingPolygonTwoIndex += 1;
-                _selectedClippingPolygonTwo = _polygons[_selectedClippingPolygonTwoIndex];
-                ColorPolygonEdges(_selectedClippingPolygonTwo, _defaultSelectedPolygonColor);
-            }
+            isStartVertexSet = false;
+            return null;
         }
 
         private void ClipPolygons(object sender, RoutedEventArgs e)
         {
-            if (_selectedClippingPolygonOne == null || _selectedClippingPolygonTwo == null) return;
+            if (_fillPolygon.Vertexes.Count < 3 || _clippPolygon.Vertexes.Count < 3) return;
 
             List<Vertex> clipPolygonOneVertexes = new List<Vertex>();
             List<Vertex> clipPolygonTwoVertexes = new List<Vertex>();
+            Vertex startVertex = null;
 
-            GenerateListsWithIntersectionPoints(_selectedClippingPolygonOne, _selectedClippingPolygonTwo, out clipPolygonOneVertexes, out clipPolygonTwoVertexes);
+            GenerateListsWithIntersectionPoints(_fillPolygon, _clippPolygon, out clipPolygonOneVertexes, out clipPolygonTwoVertexes, out startVertex);
 
-            _polygons.Remove(_selectedClippingPolygonOne);
-            ErasePolygonFromCanvas(_selectedClippingPolygonOne);
-            _polygons.Remove(_selectedClippingPolygonTwo);
-            ErasePolygonFromCanvas(_selectedClippingPolygonTwo);
-
-            if (clipPolygonOneVertexes.Count != _selectedClippingPolygonOne.Vertexes.Count)
+            if (clipPolygonOneVertexes.Count != _fillPolygon.Vertexes.Count)
             {
-                Vertex startVertex;
-                while (CheckIfIsaAnyUnvisitedIntersectionPoint(clipPolygonOneVertexes, out startVertex))
-                {
-                    List<Point> newPolygonPointsCoordinates = CreateClippedPolygon(clipPolygonOneVertexes, clipPolygonTwoVertexes, startVertex);
-                    CreateAndDrawNewPolygon(newPolygonPointsCoordinates);
-                }
+                if(startVertex == null) return;
+
+                ErasePolygonFromCanvas(_fillPolygon);
+                ErasePolygonFromCanvas(_clippPolygon);
+
+                List<Point> newPolygonPointsCoordinates = CreateClippedPolygon(clipPolygonOneVertexes, clipPolygonTwoVertexes, startVertex);
+                _fillPolygon = CreateAndDrawNewPolygon(newPolygonPointsCoordinates);
+                ColorPolygon();
             }
-
-            if (_polygons.Count < 2)
-            {
-
-                _selectedClippingPolygonOne = null;
-                _selectedClippingPolygonTwo = null;
-                ClipPolygonsToggleButton.IsChecked = false;
-            }
-            else
-            {
-                ClipPolygonsToggleButton.IsChecked = true;
-            }
-
-
-
-        }
-
-        private void CreateAndDrawNewPolygon(List<Point> pointsCoordinates)
-        {
-            Polygon newPolygon = new Polygon();
-
-            foreach (var coordinates in pointsCoordinates)
-            {
-                newPolygon.AddNewVertex(coordinates, new Rectangle());
-            }
-            for (int i = 0; i < newPolygon.Vertexes.Count - 1; i++)
-            {
-                Vertex vertexOne = newPolygon.GetVertexByIndex(i);
-                Vertex vertexTwo = newPolygon.GetVertexByIndex(i + 1);
-                newPolygon.AddNewEdge(vertexOne, vertexTwo, CreateEdgeLine(vertexOne, vertexTwo));
-            }
-            Vertex vertexLast = newPolygon.GetVertexByIndex(newPolygon.Vertexes.Count - 1);
-            Vertex vertexFirst = newPolygon.GetVertexByIndex(0);
-            newPolygon.AddNewEdge(vertexLast, vertexFirst, CreateEdgeLine(vertexLast, vertexFirst));
-            newPolygon.InitializeEdgeTable();
-            _polygons.Add(newPolygon);
         }
 
         private List<Point> CreateClippedPolygon(List<Vertex> clipPolygonOneVertexes, List<Vertex> clipPolygonTwoVertexes,
@@ -849,29 +667,28 @@ namespace PolygonFilling
             return retValueList;
         }
 
-        private bool CheckIfIsaAnyUnvisitedIntersectionPoint(List<Vertex> vertexes, out Vertex notVisitedVertex)
-        {
-            notVisitedVertex = new Vertex();
-            foreach (var vertex in vertexes)
-            {
-                if (vertex.IsIntersected && !vertex.IsVisited)
-                {
-                    notVisitedVertex = vertex;
-                    return true;
-                }
-            }
-            return false;
-        }
+
 
         #endregion
 
         private void ErasePolygonFromCanvas(Polygon polygon)
         {
+            foreach (var vertex in polygon.Vertexes)
+            {
+                Canvas.Children.Remove(vertex.Pixel);
+            }
             foreach (var edge in polygon.Edges)
             {
                 foreach (var linePixel in edge.Line)
                 {
                     Canvas.Children.Remove(linePixel.Rectangle);
+                }
+            }
+            foreach (var list in polygon.PixelFill)
+            {
+                foreach (var rectangle in list)
+                {
+                    Canvas.Children.Remove(rectangle);
                 }
             }
         }
@@ -886,7 +703,7 @@ namespace PolygonFilling
             Vector normalAddedWithDisurbVector = _normalVector.AddVectors(_disturbVector);
             Vector normalDisurbVector = normalAddedWithDisurbVector.Normalize();
 
-            double cos = normalDisurbVector.DotProduct(_lightVersor);
+            double cos = normalDisurbVector.DotProduct(_lightVector);
 
             int r = (int)((lightColorVector.X * objectColorVector.X * cos) * rgbCount);
             int g = (int)((lightColorVector.Y * objectColorVector.Y * cos) * rgbCount);
@@ -990,6 +807,7 @@ namespace PolygonFilling
         private void ChooseDefaultNormalVector(object sender, RoutedEventArgs e)
         {
             _isDefaultInsteadOfTextureNormalVector = true;
+            _normalVector = new Vector(0,0,1);
         }
 
         private void ChooseTextureNormalVector(object sender, RoutedEventArgs e)
@@ -1000,6 +818,7 @@ namespace PolygonFilling
         private void ChooseDefaultHeightMap(object sender, RoutedEventArgs e)
         {
             _isDefaultInsteadOfTextureHeightMap = true;
+            _disturbVector = new Vector(0,0,0);
         }
 
         private void ChooseTextureHeightMap(object sender, RoutedEventArgs e)
@@ -1007,8 +826,215 @@ namespace PolygonFilling
             _isDefaultInsteadOfTextureHeightMap = false;
         }
 
+        private void ChooseDefaultLightVector(object sender, RoutedEventArgs e)
+        {
+            _isDefaultInsteadOfFixedLightVector = true;
+        }
+
+        private void ChooseFixedLightVector(object sender, RoutedEventArgs e)
+        {
+            _isDefaultInsteadOfFixedLightVector = false;
+        }
+
         #endregion
 
+        #region Moving
 
+        private void EnableMovingPolygon()
+        {
+            Canvas.MouseLeftButtonDown += LeftButtonDownPolygon;
+            Canvas.MouseLeftButtonUp += LeftButtonUpPolygon;
+        }
+
+        private void DisableMovingPolygon()
+        {
+            Canvas.MouseLeftButtonDown -= LeftButtonDownPolygon;
+            Canvas.MouseLeftButtonUp -= LeftButtonUpPolygon;
+        }
+
+        private Vertex _movingVertex;
+
+        private void EnableMovingVertexes()
+        {
+            foreach (var ver in _fillPolygon.Vertexes)
+            {
+                ver.Pixel.MouseLeftButtonDown += LeftButtonDownVertex;
+            }
+            Canvas.MouseLeftButtonUp += LeftButtonUpVertex;
+        }
+
+        private void DisableMovingVertexes()
+        {
+            foreach (var ver in _fillPolygon.Vertexes)
+            {
+                ver.Pixel.MouseLeftButtonDown -= LeftButtonDownVertex;
+            }
+            Canvas.MouseLeftButtonUp -= LeftButtonUpVertex;
+        }
+
+        private void LeftButtonDownVertex(object sender, MouseButtonEventArgs e)
+        {
+            Rectangle rectangle = sender as Rectangle;
+            if (rectangle != null)
+            {
+                _movingVertex = FindVerticeByRectangle(rectangle);
+            }
+        }
+
+        private void LeftButtonUpVertex(object sender, MouseButtonEventArgs e)
+        {
+            //ustalenie pozycji myszki
+            Point coords = GetMousePosition(sender);
+            int x = (int) coords.X;
+            int y = (int)coords.Y;
+
+            MoveVerticle(x,y);
+
+            _movingVertex = null;
+        }
+
+        private void MoveVerticle(int x, int y)
+        {
+            if(_movingVertex == null) return;
+
+            int vertexId = _movingVertex.Id;
+            List<Edge> edges = new List<Edge>(_fillPolygon.Edges.Where(l => l.VertexOne.Id == vertexId || l.VertexTwo.Id == vertexId));
+
+            Canvas.Children.Remove(_movingVertex.Pixel);
+            foreach (var edge in edges)
+            {
+                ClearEdge(edge);
+                edge.Line.Clear();
+            }
+
+            // -------------                
+
+            // nowy punkt wierzchołka
+            Rectangle pixel = SetPixel(x, y, _defaultPolygonColor);
+
+            pixel.MouseLeftButtonDown += LeftButtonDownVertex;
+            pixel.MouseLeftButtonUp += LeftButtonUpVertex;
+            _movingVertex.SetNewPixel(x, y, pixel);
+
+            // --------------------
+
+            // przerysowanie linii
+
+            foreach (var edge in edges)
+            {
+                if (edge.VertexOne.Id == vertexId)
+                {
+                    edge.VertexOne = _movingVertex;
+                }
+                else
+                {
+                    edge.VertexTwo = _movingVertex;
+                }
+                edge.Line = CreateEdgeLine(edge.VertexOne, edge.VertexTwo);
+            }
+
+            //--------------------------------   
+
+            // przerysowanie wnetrza
+
+            foreach (var list in _fillPolygon.PixelFill)
+            {
+                foreach (var rectangle in list)
+                {
+                    Canvas.Children.Remove(rectangle);
+                }
+            }
+            _fillPolygon.EdgeTable = new List<EdgeTableElem>[0];
+            _fillPolygon.InitializeEdgeTable();
+            ColorPolygon();
+
+            //-----------------------
+        }
+
+        private void ClearEdge(Edge edge)
+        {
+            foreach (var linePixel in edge.Line)
+            {
+                Canvas.Children.Remove(linePixel.Rectangle);
+            }
+        }
+
+        private Vertex FindVerticeByRectangle(Rectangle rectangle)
+        {
+            return _fillPolygon.Vertexes.FirstOrDefault(v => Equals(v.Pixel, rectangle));
+        }
+
+        private void AllowMovingPolygon(object sender, RoutedEventArgs e)
+        {
+            DisableMovingVertexes();
+            EnableMovingPolygon();
+
+            foreach (var vertex in _fillPolygon.Vertexes)
+            {
+                vertex.Pixel.MouseLeftButtonUp += LeftButtonUpPolygon;
+            }
+        }
+
+        private void ForbidMovingPolygon(object sender, RoutedEventArgs e)
+        {
+            EnableMovingVertexes();
+            DisableMovingPolygon();
+
+            foreach (var vertex in _fillPolygon.Vertexes)
+            {
+                vertex.Pixel.MouseLeftButtonUp -= LeftButtonUpPolygon;
+            }
+        }
+    
+
+        private Point _previousMousePosition = new Point();
+
+        private void LeftButtonDownPolygon(object sender, MouseButtonEventArgs e)
+        {
+            _previousMousePosition = GetMousePosition(sender);
+        }
+
+        private void LeftButtonUpPolygon(object sender, MouseButtonEventArgs e)
+        {
+            Point _currentMousePosition = GetMousePosition(sender);
+
+            int dx = (int)(_previousMousePosition.X - _currentMousePosition.X);
+            int dy = (int)(_previousMousePosition.Y - _currentMousePosition.Y);
+
+            MovePolygon(dx, dy);
+
+        }
+
+        private void MovePolygon(int dx, int dy)
+        {            
+            ErasePolygonFromCanvas(_fillPolygon);
+            _fillPolygon.Edges.Clear();
+
+            foreach (var vertex in _fillPolygon.Vertexes)
+            {
+                vertex.X -= dx;
+                vertex.Y -= dy;
+                vertex.SetNewPixel(vertex.X, vertex.Y, SetPixel(vertex.X, vertex.Y, _defaultPolygonColor));
+            }
+
+            for (int i = 0; i < _fillPolygon.Vertexes.Count - 1; i++)
+            {
+                Vertex vertexOne = _fillPolygon.GetVertexByIndex(i);
+                Vertex vertexTwo = _fillPolygon.GetVertexByIndex(i + 1);
+                _fillPolygon.AddNewEdge(vertexOne, vertexTwo, CreateEdgeLine(vertexOne, vertexTwo));
+            }
+            Vertex vertexLast = _fillPolygon.GetVertexByIndex(_fillPolygon.Vertexes.Count - 1);
+            Vertex vertexFirst = _fillPolygon.GetVertexByIndex(0);
+            _fillPolygon.AddNewEdge(vertexLast, vertexFirst, CreateEdgeLine(vertexLast, vertexFirst));
+
+            _fillPolygon.EdgeTable = new List<EdgeTableElem>[0];
+            _fillPolygon.InitializeEdgeTable();
+            ColorPolygon();
+            
+        }
+
+
+        #endregion
+        
     }
 }
