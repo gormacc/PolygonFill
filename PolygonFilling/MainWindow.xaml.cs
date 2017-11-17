@@ -504,18 +504,17 @@ namespace PolygonFilling
                     {
                         if (CheckIfCanIntersect(edgeOne, edgeTwo) && !(edgeOne.WasIntersected && edgeTwo.WasIntersected))
                         {
-                            if (!isStartVertexSet)
-                            {
-                                startVertex = CheckIfCanBeStartVertex(edgeOne.VertexOne, edgeOne.VertexTwo, edgeTwo,
-                                    out isStartVertexSet);
-                            }
-
                             Point coordinates = GetIntersectionCoordinates(edgeOne, edgeTwo);
 
                             Vertex vOne = new Vertex(vertexesOne.Count, coordinates, new Rectangle());
                             vOne.IsIntersected = true;
                             int indexOne = vertexesOne.IndexOf(edgeOne.VertexTwo);
                             vertexesOne.Insert(indexOne, vOne);
+
+                            if (!isStartVertexSet)
+                            {
+                                startVertex = CheckIfCanBeStartVertex(edgeOne, edgeTwo, vOne, out isStartVertexSet);
+                            }
 
                             Vertex vTwo = new Vertex(vertexesTwo.Count, coordinates, new Rectangle());
                             vTwo.IsIntersected = true;
@@ -578,13 +577,12 @@ namespace PolygonFilling
             edgesTwo.Add(newEdgeToAdd);
         }
 
-        private Vertex CheckIfCanBeStartVertex(Vertex vertexOne, Vertex vertexTwo, Edge edge, out bool isStartVertexSet)
+        private Vertex CheckIfCanBeStartVertex(Edge edgeOne, Edge edgeTwo, Vertex intersectionPoint, out bool isStartVertexSet)
         {
-
-            Point p0 = new Point(edge.VertexOne.X, edge.VertexOne.Y);
-            Point p1 = new Point(edge.VertexTwo.X, edge.VertexTwo.Y);
-            Point p2 = new Point(vertexOne.X, vertexOne.Y);
-            Point p3 = new Point(vertexTwo.X, vertexTwo.Y);
+            Point p0 = new Point(edgeTwo.VertexOne.X, edgeTwo.VertexOne.Y);
+            Point p1 = new Point(edgeTwo.VertexTwo.X, edgeTwo.VertexTwo.Y);
+            Point p2 = GenerateVertexThroughLine(intersectionPoint, edgeOne.VertexOne, 10);
+            Point p3 = GenerateVertexThroughLine(intersectionPoint, edgeOne.VertexTwo, 10);
 
             double a = ((p2.X - p0.X) * (p1.Y - p0.Y)) - ((p2.Y - p0.Y) * (p1.X - p0.X));
             double b = ((p3.X - p0.X) * (p1.Y - p0.Y)) - ((p3.Y - p0.Y) * (p1.X - p0.X));
@@ -592,7 +590,7 @@ namespace PolygonFilling
             if (a > 0 && b < 0)
             {
                 isStartVertexSet = true;
-                return vertexTwo;
+                return intersectionPoint;
             }
 
             isStartVertexSet = false;
@@ -1039,6 +1037,91 @@ namespace PolygonFilling
 
 
         #endregion
-        
+
+        private Point GenerateVertexThroughLine(Vertex v1, Vertex v2, int limit)
+        {
+            int x1 = (int)v1.X;
+            int x2 = (int)v2.X;
+            int y1 = (int)v1.Y;
+            int y2 = (int)v2.Y;
+
+            int d, dx, dy, ai, bi, xi, yi;
+            int x = x1, y = y1;
+            // ustalenie kierunku rysowania
+            if (x1 < x2)
+            {
+                xi = 1;
+                dx = x2 - x1;
+            }
+            else
+            {
+                xi = -1;
+                dx = x1 - x2;
+            }
+            // ustalenie kierunku rysowania
+            if (y1 < y2)
+            {
+                yi = 1;
+                dy = y2 - y1;
+            }
+            else
+            {
+                yi = -1;
+                dy = y1 - y2;
+            }
+
+            int counter = 0;
+
+            // oś wiodąca OX
+            if (dx > dy)
+            {
+                ai = (dy - dx) * 2;
+                bi = dy * 2;
+                d = bi - dx;
+                // pętla po kolejnych x
+                while (x != x2)
+                {
+                    // test współczynnika
+                    if (d >= 0)
+                    {
+                        x += xi;
+                        y += yi;
+                        d += ai;
+                    }
+                    else
+                    {
+                        d += bi;
+                        x += xi;
+                    }
+                    if (counter++ > limit) break;
+                }
+            }
+            // oś wiodąca OY
+            else
+            {
+                ai = (dx - dy) * 2;
+                bi = dx * 2;
+                d = bi - dy;
+                // pętla po kolejnych y
+                while (y != y2)
+                {
+                    // test współczynnika
+                    if (d >= 0)
+                    {
+                        x += xi;
+                        y += yi;
+                        d += ai;
+                    }
+                    else
+                    {
+                        d += bi;
+                        y += yi;
+                    }
+                    if (counter++ > limit) break;
+                }
+            }
+            return new Point(x,y);
+        }
+
     }
 }
