@@ -299,6 +299,8 @@ namespace PolygonFilling
                 Math.Min(Math.Max(x - _fillPolygon.XMin, 1), _normalVectorTexture.Width - 1) ,
                 Math.Min(Math.Max(y - _fillPolygon.YMin, 1), _normalVectorTexture.Height - 1) );
             _normalVector = new Vector(newColor);
+            _normalVector = new Vector(_normalVector.X, _normalVector.Y, 1);
+            _normalVector = _normalVector.Normalize();
         }
 
         private void SetNewDisturbVector(int x, int y)
