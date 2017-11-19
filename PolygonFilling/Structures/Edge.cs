@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Windows.Documents;
-using System.Windows.Shapes;
 
 namespace PolygonFilling.Structures
 {

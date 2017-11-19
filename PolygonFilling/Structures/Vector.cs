@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Security.Policy;
 using System.Windows.Media;
 
 namespace PolygonFilling.Structures
