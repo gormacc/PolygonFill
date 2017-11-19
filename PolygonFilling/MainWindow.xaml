@@ -16,82 +16,85 @@
 
         <Canvas Grid.Column="0" Name="Canvas" Background="White"/>
         <StackPanel Grid.Column="1" Background="Coral">
-            
-            <Button Name="ColorPolygonButton" Click="ColorPolygonClick" Content="Wypelnij" Margin="10,20" />
 
-            <StackPanel Margin="10,20">
-                <DockPanel>
-                    <StackPanel DockPanel.Dock="Left" Margin="0,0,50,0">
-                        <TextBlock Text="PolygonFillColor"></TextBlock>
-                        <xctk:ColorPicker Name="PolygonFillColorPicker" SelectedColor="Red" SelectedColorChanged="PolygonFillColorChanged" />
-                    </StackPanel>
-                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                        <Image Name="FillPolygonTextureImage"/>
-                        <Button Name="LoadFillPolygonTextureButton" Content="Load Texture" Click="LoadFillPolygonTexture"/>
-                    </StackPanel>
-                </DockPanel>
-                <StackPanel Orientation="Horizontal">
-                    <RadioButton Content="Kolor" IsChecked="True" Checked="ChooseColorFillPolygon" GroupName="PolygonFillColorOrTexture"/>
-                    <RadioButton Content="Tekstura" Checked="ChooseTextureFillPolygon" GroupName="PolygonFillColorOrTexture"/>
-                </StackPanel>
-            </StackPanel>
-
-            <StackPanel Orientation="Horizontal" Margin="10,20">
-                <TextBlock Text="LightColor"></TextBlock>
-                <xctk:ColorPicker Name="LightColorPicker" SelectedColor="White" SelectedColorChanged="LightColorChanged" />
-            </StackPanel>
-
-            <StackPanel Margin="10,20">
-                <TextBlock Text="Wektor normalny"></TextBlock>
-                <DockPanel>
-                    <StackPanel DockPanel.Dock="Left" Margin="0,0,50,0">
-                        <RadioButton Content="Stały" IsChecked="True" Checked="ChooseDefaultNormalVector" GroupName="NormalVectorDefaultOrTexture"/>
-                        <RadioButton Content="Tekstura" Checked="ChooseTextureNormalVector" GroupName="NormalVectorDefaultOrTexture"/>
-                    </StackPanel>
-                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                        <Image Name="NormalVectorTextureImage"/>
-                        <Button Name="LoadNormalVectorTextureButton" Content="Load Texture" Click="LoadNormalVectorTexture"/>
-                    </StackPanel>
-                </DockPanel>
-            </StackPanel>
-
-            <StackPanel Margin="10,20">
-                <TextBlock Text="Mapa wysokości"></TextBlock>
-                <DockPanel>
-                    <StackPanel DockPanel.Dock="Left" Margin="0,0,50,0">
-                        <RadioButton Content="Stały" IsChecked="True" Checked="ChooseDefaultHeightMap" GroupName="HeightMapDefaultOrTexture"/>
-                        <RadioButton Content="Tekstura" Checked="ChooseTextureHeightMap" GroupName="HeightMapDefaultOrTexture"/>
-                    </StackPanel>
-                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                        <Image Name="HeightMapTextureImage"/>
-                        <Button Name="LoadHeightMapTextureButton" Content="Load Texture" Click="LoadHeightMapTexture"/>
-                    </StackPanel>
-                </DockPanel>
-            </StackPanel>
-
-            <StackPanel Margin="10,20">
-                <TextBlock Text="Wektor światła"/>
-                <StackPanel Orientation="Horizontal">
-                    <RadioButton Content="Stały" IsChecked="True" Checked="ChooseDefaultLightVector" GroupName="LightVectorDefaultOrFixed"/>
-                    <RadioButton Content="Z wartości suwaków" Checked="ChooseFixedLightVector" GroupName="LightVectorDefaultOrFixed"/>
-                </StackPanel>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text=" X "/>
-                    <Slider Name="LightVectorXSlider" Minimum="0" Maximum="100" Width="300"/>
-                </StackPanel>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text=" Y "/>
-                    <Slider Name="LightVectorYSlider" Minimum="0" Maximum="100" Width="300"/>
-                </StackPanel>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text=" Z "/>
-                    <Slider Name="LightVectorZSlider" Minimum="0" Maximum="100" Width="300"/>
-                </StackPanel>
-            </StackPanel>
-            
             <Button Name="ClipPolygonsButton" Click="ClipPolygons" Content="Wytnij" Margin="10,20" />
 
             <ToggleButton Name="MovePolygonButton" Checked="AllowMovingPolygon" Unchecked="ForbidMovingPolygon" Content="Poruszaj wielokat" Margin="10,20" />
+
+            <Button Name="ColorPolygonButton" Click="ColorPolygonClick" Content="Wypelnij" Margin="10,20" />
+
+            <GroupBox Header="Kolor wielokąta" Margin="10">
+                <StackPanel Orientation="Horizontal">
+                    <StackPanel Margin="0,0,20,0">
+                        <RadioButton Content="Kolor" IsChecked="True" Checked="ChooseColorFillPolygon" GroupName="PolygonFillColorOrTexture"/>
+                        <RadioButton Content="Tekstura" Checked="ChooseTextureFillPolygon" GroupName="PolygonFillColorOrTexture"/>
+                    </StackPanel>
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Left" Margin="0,0,50,0">
+                            <xctk:ColorPicker Name="PolygonFillColorPicker" SelectedColor="Red" SelectedColorChanged="PolygonFillColorChanged" />
+                        </StackPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Image Name="FillPolygonTextureImage"/>
+                            <Button Name="LoadFillPolygonTextureButton" Content="Load Texture" Click="LoadFillPolygonTexture"/>
+                        </StackPanel>
+                    </DockPanel>
+                </StackPanel>
+            </GroupBox>
+
+            <GroupBox Header="Kolor światła" Margin="10">
+                <xctk:ColorPicker Name="LightColorPicker" SelectedColor="White" SelectedColorChanged="LightColorChanged" Margin="50,0"/>
+            </GroupBox>
+
+            <GroupBox Header="Wektor normalny" Margin="10">
+                <StackPanel >
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Left" Margin="0,0,50,0">
+                            <RadioButton Content="Stały" IsChecked="True" Checked="ChooseDefaultNormalVector" GroupName="NormalVectorDefaultOrTexture"/>
+                            <RadioButton Content="Tekstura" Checked="ChooseTextureNormalVector" GroupName="NormalVectorDefaultOrTexture"/>
+                        </StackPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Image Name="NormalVectorTextureImage"/>
+                            <Button Name="LoadNormalVectorTextureButton" Content="Load Texture" Click="LoadNormalVectorTexture"/>
+                        </StackPanel>
+                    </DockPanel>
+                </StackPanel>
+            </GroupBox>
+            
+            <GroupBox Header="Mapa wysokości" Margin="10">
+                <StackPanel>
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Left" Margin="0,0,50,0">
+                            <RadioButton Content="Stały" IsChecked="True" Checked="ChooseDefaultHeightMap" GroupName="HeightMapDefaultOrTexture"/>
+                            <RadioButton Content="Tekstura" Checked="ChooseTextureHeightMap" GroupName="HeightMapDefaultOrTexture"/>
+                        </StackPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Image Name="HeightMapTextureImage"/>
+                            <Button Name="LoadHeightMapTextureButton" Content="Load Texture" Click="LoadHeightMapTexture"/>
+                        </StackPanel>
+                    </DockPanel>
+                </StackPanel>
+            </GroupBox>
+
+            <GroupBox Header="Wektor światła" Margin="10">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton Content="Stały" IsChecked="True" Checked="ChooseDefaultLightVector" GroupName="LightVectorDefaultOrFixed"/>
+                        <RadioButton Content="Z wartości suwaków" Checked="ChooseFixedLightVector" GroupName="LightVectorDefaultOrFixed"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text=" X "/>
+                        <Slider Name="LightVectorXSlider" Minimum="0" Maximum="100" Width="300"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text=" Y "/>
+                        <Slider Name="LightVectorYSlider" Minimum="0" Maximum="100" Width="300"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text=" Z "/>
+                        <Slider Name="LightVectorZSlider" Minimum="0" Maximum="100" Width="300"/>
+                    </StackPanel>
+                </StackPanel>
+            </GroupBox>
         </StackPanel>
     </Grid>
 </Window>
